@@ -1,0 +1,9 @@
+# 멤버 데이터 백업·내보내기 파일은 저장소에 올리지 않습니다
+axproof-backup*.json
+axproof-cards*.csv
+*.pdf
+
+# OS 파일
+.DS_Store
+Thumbs.db
+desktop.ini

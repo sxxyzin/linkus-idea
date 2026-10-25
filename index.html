@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AX Proof 시범 운영</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --green:#006241; --accent:#00754A; --house:#1E3932; --uplift:#2b5148; --light:#d4e9e2;
+    --gold:#cba258; --gold-lightest:#faf6ee; --gold-line:#ecdcbc; --gold-ink:#8a6a2e;
+    --warm:#f2f0eb; --ceramic:#edebe9; --white:#fff; --cool:#f9f9f9; --hair:#e7e7e7; --input:#d6dbde;
+    --ink:rgba(0,0,0,.87); --soft:rgba(0,0,0,.58); --on-dark-soft:rgba(255,255,255,.70);
+    --red:#c82014;
+    --card-shadow:0 0 .5px rgba(0,0,0,.14),0 1px 1px rgba(0,0,0,.24);
+    --lift:0 0 6px rgba(0,0,0,.24),0 8px 12px rgba(0,0,0,.14);
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--warm);color:var(--ink);font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic","Helvetica Neue",Arial,sans-serif;
+    letter-spacing:-.01em;line-height:1.55;word-break:keep-all;font-size:15px}
+  a{color:var(--accent)}
+  button,input,select,textarea{font:inherit;color:inherit}
+
+  /* layout */
+  .side{position:fixed;top:0;left:0;bottom:0;width:240px;background:var(--house);color:#fff;display:flex;flex-direction:column;padding:20px 14px;z-index:10;overflow-y:auto}
+  .side .brand{font-size:18px;font-weight:700;padding:0 8px}
+  .side .brand small{display:block;font-size:12px;font-weight:400;color:var(--on-dark-soft)}
+  .side .who{margin:18px 0 10px;padding:0 8px}
+  .side .who label{font-size:11px;color:var(--on-dark-soft);letter-spacing:.1em}
+  .side select{width:100%;margin-top:4px;background:var(--uplift);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:8px}
+  .side nav a{display:flex;justify-content:space-between;align-items:center;color:var(--on-dark-soft);text-decoration:none;padding:9px 12px;border-radius:8px;margin:2px 0;cursor:pointer}
+  .side nav a:hover{color:#fff}
+  .side nav a.on{background:var(--uplift);color:#fff;font-weight:600}
+  .side nav .sec{font-size:11px;letter-spacing:.12em;color:var(--on-dark-soft);margin:16px 12px 4px;opacity:.8}
+  .badge{background:var(--gold);color:var(--house);border-radius:50px;font-size:11px;font-weight:700;padding:1px 8px}
+  .side .foot{margin-top:auto;padding:12px 8px 0;font-size:12px;color:var(--on-dark-soft);border-top:1px solid rgba(255,255,255,.12)}
+  .side .foot b{color:#fff}
+  .main{margin-left:240px;padding:28px 32px 80px;min-height:100vh}
+  @media(max-width:860px){
+    .side{position:static;width:auto;flex-direction:column}
+    .side nav{display:flex;flex-wrap:wrap;gap:4px} .side nav .sec{width:100%;margin:8px 4px 0}
+    .main{margin-left:0;padding:20px 16px 80px}
+  }
+
+  h1{font-size:26px;font-weight:700;color:var(--green);letter-spacing:-.02em}
+  h2{font-size:18px;font-weight:700;margin:24px 0 10px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .head p{color:var(--soft);margin-top:4px}
+  .card{background:var(--white);border-radius:12px;box-shadow:var(--card-shadow);padding:18px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  .split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media(max-width:1100px){.split{grid-template-columns:1fr}}
+  @media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .muted{color:var(--soft)} .s{font-size:13px} .xs{font-size:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sp{flex:1}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;border-radius:50px;padding:7px 16px;font-weight:600;font-size:14px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;transition:all .2s ease;white-space:nowrap}
+  .btn.o{background:transparent;color:var(--accent)}
+  .btn.g{background:transparent;color:var(--ink);border-color:var(--input)}
+  .btn.d{background:transparent;color:var(--red);border-color:var(--red)}
+  .btn.sm{padding:4px 12px;font-size:13px}
+  .btn:active{transform:scale(.95)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  .pills{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{border:1px solid var(--input);border-radius:50px;padding:5px 13px;background:#fff;cursor:pointer;font-size:14px;transition:all .2s ease}
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .pill:active{transform:scale(.95)}
+
+  .fld{border:1px solid var(--input);border-radius:4px;position:relative;margin-top:14px;background:#fff}
+  .fld>label{position:absolute;top:-9px;left:10px;background:#fff;padding:0 4px;font-size:11px;font-weight:700;color:var(--soft);letter-spacing:.02em}
+  .fld input,.fld select,.fld textarea{width:100%;border:0;padding:11px 12px;background:transparent;outline:none;border-radius:4px}
+  .fld textarea{min-height:76px;resize:vertical}
+  .fld:focus-within{border-color:var(--accent)}
+  .lbl{font-size:12px;font-weight:700;color:var(--soft);margin:14px 0 6px;letter-spacing:.02em}
+  .hint{font-size:12px;color:var(--soft);margin-top:6px}
+
+  .chip{display:inline-block;font-size:11.5px;font-weight:600;border-radius:50px;padding:2px 9px;white-space:nowrap}
+  .chip.ok{background:var(--light);color:var(--green)}
+  .chip.mid{background:var(--gold-lightest);color:var(--gold-ink);border:1px solid var(--gold-line)}
+  .chip.no{background:var(--ceramic);color:var(--soft)}
+  .chip.red{background:#fdecea;color:var(--red)}
+
+  .item{border-top:1px solid var(--hair);padding:14px 0}
+  .item:first-child{border-top:0;padding-top:0}
+  .item .meta{font-size:12px;color:var(--soft);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .item .ttl{font-weight:600;margin:4px 0}
+  .ev a{font-size:12.5px;margin-right:10px}
+  .qa{background:var(--cool);border:1px solid var(--hair);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}
+  .qa .q{font-weight:600}
+  .qa .a{margin-top:6px;padding-top:6px;border-top:1px dashed var(--input)}
+  .panel{background:var(--gold-lightest);border:1px solid var(--gold-line);border-radius:12px;padding:14px;margin-top:10px}
+  .panel.green{background:#f1f8f5;border-color:var(--light)}
+
+  .kpi .v{font-size:28px;font-weight:700;color:var(--green);line-height:1.2}
+  .kpi .l{font-size:12px;color:var(--soft)}
+  .kpi .n{font-size:12px;color:var(--accent);font-weight:600}
+  .wk{display:flex;align-items:flex-end;gap:10px;height:150px;margin-top:8px}
+  .wk>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--soft);gap:3px}
+  .wk i{display:block;width:100%;background:var(--accent);border-radius:6px 6px 0 0;min-height:2px}
+  .wk b{font-size:11px;color:var(--green)}
+  .hbar{display:grid;grid-template-columns:80px 1fr 30px;gap:8px;align-items:center;font-size:13px;margin:7px 0}
+  .hbar .t{height:10px;background:var(--ceramic);border-radius:50px;overflow:hidden}
+  .hbar .f{height:100%;background:var(--accent);border-radius:50px}
+  .hbar em{font-style:normal;color:var(--soft);text-align:right}
+  table.tb{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tb th{font-size:12px;color:var(--soft);font-weight:600;text-align:left;padding:8px 6px;border-bottom:1px solid var(--hair);white-space:nowrap}
+  .tb td{padding:9px 6px;border-bottom:1px solid var(--hair);vertical-align:top}
+  .tbw{overflow-x:auto}
+  .mx td{text-align:center;border-radius:6px;padding:7px 4px;font-weight:600;font-size:12px}
+  .mx td.n{text-align:left;background:none}
+  .mx{border-collapse:separate;border-spacing:4px;width:100%}
+  .mx th{font-size:11px;color:var(--soft);font-weight:600;text-align:center;padding:2px;max-width:110px}
+  .lead{background:var(--accent);color:#fff} .co{background:var(--light);color:var(--green)} .none{background:var(--ceramic);color:var(--soft)}
+  .dots{display:inline-flex;gap:4px;vertical-align:middle}
+  .dots i{width:11px;height:11px;border-radius:50%;background:var(--ceramic)} .dots i.f{background:var(--accent)}
+  .lvl{display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;padding:5px 0}
+  .empty{color:var(--soft);text-align:center;padding:28px 12px;font-size:14px}
+  .timer{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--house);color:#fff;padding:10px 18px;border-radius:50px;box-shadow:var(--lift);font-size:14px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.on{opacity:1}
+  .hero{background:var(--house);color:#fff;border-radius:12px;padding:28px}
+  .hero h1{color:#fff}
+  .hero p{color:var(--on-dark-soft);margin-top:8px}
+  .msgs{max-height:420px;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .msg{font-size:14px;padding:10px 12px;border-radius:12px;max-width:92%;white-space:pre-wrap}
+  .msg .who{display:block;font-size:11px;font-weight:700;color:var(--soft);margin-bottom:2px;white-space:normal}
+  .msg.user{background:var(--light);margin-left:auto}
+  .msg.assistant{background:var(--cool);border:1px solid var(--hair)}
+  .msg.paste{background:var(--gold-lightest);border:1px dashed var(--gold-line)}
+  .sasu{background:var(--house);color:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:var(--lift);animation:pop .35s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .sasu .who{font-size:11px;font-weight:700;color:var(--light);letter-spacing:.08em}
+  .sasu .qq{font-size:17px;font-weight:600;margin:6px 0 8px}
+  .sasu textarea{width:100%;margin-top:10px;min-height:70px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;border-radius:4px;padding:10px;outline:none}
+  details.chatref{margin-top:6px;font-size:13px}
+  details.chatref summary{cursor:pointer;color:var(--accent);font-weight:600}
+  details.chatref .cm{background:var(--cool);border-radius:8px;padding:6px 10px;margin-top:4px;white-space:pre-wrap}
+  details.chatref .cm.user{background:var(--light)}
+  .cand{border:1px solid var(--hair);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}
+  .miss{color:var(--red);font-weight:600}
+  /* DL 제출본 */
+  .dl{background:#fff;border-radius:12px;box-shadow:var(--card-shadow);padding:32px;max-width:900px}
+  .dlh{border-bottom:2px solid var(--house);padding-bottom:14px}
+  .dlk{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--accent)}
+  .dlh h2{font-size:24px;margin:6px 0 4px;color:var(--green)}
+  .dlmeta,.dlnote{font-size:12px;color:var(--soft)}
+  .dlnote{margin-top:4px}
+  .dlstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+  .dlstats div{background:var(--cool);border-radius:8px;padding:10px 12px}
+  .dlstats b{display:block;font-size:20px;color:var(--green)} .dlstats span{font-size:12px;color:var(--soft)}
+  .dlsum{background:var(--gold-lightest);border-radius:8px;padding:14px 16px;margin-bottom:16px}
+  .dlsum h3{font-size:15px;margin-bottom:6px} .dlsum p{font-size:14px}
+  .dlc{border:1px solid var(--hair);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .dlch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:14px}
+  .dlch .sp{flex:1}
+  .dlt{width:100%;border-collapse:collapse;font-size:14px}
+  .dlt th{width:72px;text-align:left;vertical-align:top;color:var(--green);font-size:13px;padding:7px 8px 7px 0;border-top:1px solid var(--hair);white-space:nowrap}
+  .dlt td{padding:7px 0;border-top:1px solid var(--hair);vertical-align:top}
+  .dlq{font-size:12.5px;color:var(--soft);background:var(--cool);border-radius:6px;padding:4px 8px;margin-top:4px}
+  .dlpp{margin-top:8px}
+  .dlf{margin-top:18px;padding-top:12px;border-top:1px solid var(--hair);font-size:11.5px;color:var(--soft)}
+  @media(max-width:760px){.dl{padding:18px}.dlstats{grid-template-columns:1fr 1fr}}
+  @media print{
+    @page{size:A4;margin:14mm}
+    .dl{box-shadow:none;padding:0;max-width:none}
+    .dlc{break-inside:avoid}
+    .dlsum,.dlstats div,.chip,.dlq{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    a{color:inherit;text-decoration:none}
+  }
+  pre.sql{background:var(--cool);border:1px solid var(--hair);border-radius:8px;padding:12px;font-size:12px;overflow-x:auto;white-space:pre}
+  .sum{background:var(--gold-lightest);border-radius:12px;padding:12px 14px;margin-top:12px}
+  @media print{.side,.noprint,.toast{display:none!important} .main{margin:0;padding:0} body{background:#fff} .card{box-shadow:none;border:1px solid var(--hair)}}
+</style>
+</head>
+<body>
+<aside class="side noprint" id="side"></aside>
+<main class="main" id="main"></main>
+<div class="toast" id="toast"></div>
+<!-- 배포용 설정(선택): 같은 폴더의 config.js에 공유 DB 주소를 적어두면 모든 멤버가 자동 연결됩니다. 없으면 무시됩니다. -->
+<script src="config.js" onerror="void 0"></script>
+
+<script>
+/* =========================================================
+   AX Proof 시범 운영 웹앱 (단일 파일)
+   - 로컬 모드: 이 브라우저의 localStorage에 저장
+   - 공유 모드: Supabase 테이블 1개(axproof_records)에 저장, 서버 시간 기록
+   ========================================================= */
+const LS_KEY='axproof.pilot.v1', ME_KEY='axproof.pilot.me', CFG_KEY='axproof.pilot.cfg';
+const COLL={user:'users',project:'projects',card:'cards',question:'questions',verif:'verifs',level:'levels',chat:'chats',note:'notes',summary:'summaries'};
+const TYPES=['문제 정의','대안 선택','AI 검증','방향 전환','실행 판단'];
+const CHOICES=['채택','일부 수정','기각','AI 미사용'];
+const ORIGINS=['작업 중','공유시간','스태프·현직자 피드백'];
+const AXES=['문제 구조화','근거 검증','대안 판단','AI 조율','결과 학습'];
+const EV_KINDS=['문서 버전','AI 대화','자료·논문','실무자 조언','현장 사진','검증 결과'];
+const ROLE_LABEL={member:'멤버',mentor:'멘토',admin:'운영진'};
+const QUESTION_BANK={
+  '문제 정의':['범위를 이렇게 정한 이유는? 이 범위 때문에 빠지는 대상은 없을까?','성공했다고 판단할 기준은 무엇으로 정했어?'],
+  '대안 선택':['버린 대안의 가장 큰 장점은 뭐였어? 그래도 버린 이유는?','시간이 두 배 있었다면 다른 선택을 했을까?'],
+  'AI 검증':['AI 결과의 그 문제를 어떻게 알아챘어? 어떤 신호가 있었어?','같은 검증을 다른 부분에도 해봤어? 결과는?'],
+  '방향 전환':['어떤 근거가 생각을 바꾸게 했어? 원래 판단의 근거는 뭐였어?','방향을 바꾸면서 잃은 것은 뭐야?'],
+  '실행 판단':['결과가 예상과 달랐다면 다음엔 무엇을 바꿀 거야?','이 결정을 되돌려야 하는 신호는 뭐라고 봐?']
+};
+const COMMON_Q=['조건이 바뀐다면(예: 데이터가 절반이라면) 판단이 달라질까?','이 판단을 팀원에게 30초로 설명한다면?'];
+
+let S=emptyState(), cfg=loadJSON(CFG_KEY,{mode:'local',url:'',key:''}), sb=null;
+let view='', ui={open:null, filter:'pending', team:'', profileUser:'', draft:null};
+let timers=[];
+
+function emptyState(){return {users:[],projects:[],cards:[],questions:[],verifs:[],levels:[],chats:[],notes:[],summaries:[]}}
+function loadJSON(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const fmt=iso=>{if(!iso)return '-';const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`};
+const fmtD=iso=>{const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()}`};
+const localInput=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const byTime=(a,b)=>new Date(a.createdAt)-new Date(b.createdAt);
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2200)}
+
+/* ---------- AI (Claude API, 브라우저 직접 호출) ---------- */
+// 키는 이 브라우저에만 저장되고 공유 DB로 올라가지 않습니다.
+const MODEL='claude-opus-5-5', SDK_URL='https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.133.0/+esm', AIKEY_KEY='axproof.pilot.aikey';
+let Anthropic=null, aiClient=null, aiClientKey='';
+const aiKey=()=>{try{return localStorage.getItem(AIKEY_KEY)||''}catch(e){return ''}};
+async function getClient(){
+  if(!aiKey()) throw new Error('Claude API 키가 없습니다');
+  if(!Anthropic) Anthropic=(await import(SDK_URL)).default;
+  if(!aiClient||aiClientKey!==aiKey()){aiClient=new Anthropic({apiKey:aiKey(),dangerouslyAllowBrowser:true});aiClientKey=aiKey()}
+  return aiClient;
+}
+async function askClaude(system,messages,format){
+  const client=await getClient();
+  const res=await client.beta.messages.create({
+    model:MODEL, max_tokens:16000, system, messages,
+    output_config:Object.assign({effort:'low'},format?{format}:{}),
+    betas:['server-side-fallback-2026-07-01'], fallbacks:'default'
+  });
+  if(res.stop_reason==='refusal') throw new Error('AI가 이 요청에는 답하지 않았습니다');
+  return res.content.filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+}
+function aiErr(e){
+  if(Anthropic){
+    if(e instanceof Anthropic.AuthenticationError) return 'API 키가 올바르지 않습니다';
+    if(e instanceof Anthropic.RateLimitError) return '요청이 많습니다. 잠시 후 다시 시도하세요';
+    if(e instanceof Anthropic.APIConnectionError) return '네트워크 연결을 확인하세요';
+  }
+  return e&&e.message||String(e);
+}
+const chatSystem=p=>`너는 링커스 AX 프로젝트 참여자를 돕는 업무 어시스턴트다. 프로젝트: ${p?p.title:''}${p&&p.desc?' — '+p.desc:''}. 한국어로 간결하게 답한다. 사용자가 스스로 판단할 수 있도록 근거와 가정을 분명히 밝히고, 확실하지 않은 수치나 출처는 추정이라고 표시한다.`;
+// AI 사수 = Decision Log 정리 도우미. 판단을 대신 만들지 않고, 남긴 기록 안에서만 정리한다.
+const SASU_SYSTEM=`너는 링커스 멤버의 Decision Log 정리를 돕는 'AI 사수'다. 판단은 멤버가 내린 것이고, 너는 그 판단을 대신 만들지 않는다. 멤버가 남긴 대화·카드·근거에 실제로 있는 내용만 쓰고, 없는 사실이나 수치는 지어내지 않는다. 한국어로, 멤버 본인의 1인칭 말투로 짧게 쓴다.`;
+const CAND_SCHEMA={type:'object',additionalProperties:false,required:['candidates'],properties:{candidates:{type:'array',items:{type:'object',additionalProperties:false,required:['type','choice','reason','evidence'],properties:{type:{type:'string',enum:TYPES},choice:{type:'string',enum:CHOICES},reason:{type:'string'},evidence:{type:'string'}}}}}};
+const CHECK_SCHEMA={type:'object',additionalProperties:false,required:['feedback','reason_suggestion'],properties:{feedback:{type:'array',items:{type:'string'}},reason_suggestion:{type:'string'}}};
+const NOTE_SCHEMA={type:'object',additionalProperties:false,required:['result','lesson'],properties:{result:{type:'string'},lesson:{type:'string'}}};
+function chatHistory(uidv,pid){
+  const msgs=S.chats.filter(m=>m.userId===uidv&&m.projectId===pid&&m.role!=='paste').sort(byTime).slice(-20);
+  const out=[];
+  msgs.forEach(m=>{const role=m.role==='assistant'?'assistant':'user';const last=out[out.length-1];
+    if(last&&last.role===role) last.content+='\n\n'+m.text; else out.push({role,content:m.text})});
+  while(out.length&&out[0].role!=='user') out.shift();
+  return out;
+}
+async function askJSON(prompt,schema){const t=await askClaude(SASU_SYSTEM,[{role:'user',content:prompt}],{type:'json_schema',schema});return JSON.parse(t)}
+function chatsSinceLastCard(uidv,pid){
+  const prev=S.cards.filter(c=>c.userId===uidv&&c.projectId===pid).sort(byTime).pop();
+  return S.chats.filter(m=>m.userId===uidv&&m.projectId===pid&&(!prev||new Date(m.createdAt)>new Date(prev.createdAt))).sort(byTime);
+}
+const chatText=ms=>ms.map(m=>(m.role==='assistant'?'AI: ':m.role==='paste'?'외부 AI 기록: ':'나: ')+m.text.slice(0,500)).join('\n');
+const guessType=tx=>/(왜|빠졌|빠진|누락|틀렸|틀린|출처|근거|확인해|이상해)/.test(tx)?'AI 검증':/(대신|바꿔|바꾸)/.test(tx)?'방향 전환':'대안 선택';
+const latestNote=c=>{const n=S.notes.filter(x=>x.cardId===c.id).sort(byTime);return n[n.length-1]};
+const latestSummary=(uidv,pid)=>{const n=S.summaries.filter(x=>x.userId===uidv&&x.projectId===pid).sort(byTime);return n[n.length-1]};
+// ① 대화에서 판단 후보 찾기
+async function findCandidates(uidv,pid){
+  const ms=chatsSinceLastCard(uidv,pid);
+  if(!ms.length) return {list:[],src:'none'};
+  if(aiKey()){try{
+    const r=await askJSON(`아래는 내가 AI와 작업한 대화다. 여기서 내가 실제로 내린 판단(AI 제안을 받아들이거나 고치거나 버린 순간, 방향을 바꾼 순간)을 최대 3개 찾아 Decision Log 카드 후보로 정리해줘. reason은 내가 한 말에 근거해 한 문장으로, evidence는 근거로 남길 자료 이름(없으면 빈 문자열).\n\n${chatText(ms)}`,CAND_SCHEMA);
+    return {list:r.candidates.slice(0,3),src:'claude'};
+  }catch(e){toast('AI 사수 연결 실패, 기본 방식으로 찾습니다: '+aiErr(e))}}
+  const list=ms.filter(m=>m.role!=='assistant'&&DETECT.test(m.text)).slice(-3).map(m=>({type:guessType(m.text),choice:'일부 수정',reason:m.text.replace(/\s+/g,' ').slice(0,80),evidence:'작업 공간 대화 '+fmt(m.createdAt)}));
+  return {list,src:'rule'};
+}
+// ② 작성 중인 카드 점검
+function ruleCheck(d){
+  const f=[];
+  if((d.reason||'').trim().length<15) f.push('이유가 짧습니다. "무엇 때문에" 그렇게 정했는지 한 구절을 더 넣어보세요.');
+  if(!d.evidence.some(e=>e.label.trim()||e.url.trim())) f.push('근거 자료가 없습니다. 확인한 표, 대화, 문서 버전 중 하나를 연결해 보세요.');
+  if(d.choice!=='AI 미사용'&&!d.evidence.some(e=>e.kind==='AI 대화')&&!chatsSinceLastCard((me()||{}).id,d.projectId).length) f.push('AI 제안을 처리했다면 그 대화를 작업 공간에 기록하거나 근거로 연결해 두세요.');
+  if(!d.prediction) f.push('(선택) AI를 보기 전 내 예측을 적어두면 나중에 판단을 돌아보기 좋습니다.');
+  return f;
+}
+async function checkDraft(d){
+  const rules=ruleCheck(d);
+  if(!aiKey()) return {feedback:rules,suggest:'',src:'rule'};
+  try{
+    const r=await askJSON(`내가 작성 중인 Decision Log 카드다. 빠진 점을 2개 이내로 짚고(feedback), 내가 쓴 이유를 내 말투를 살려 더 구체적인 한 문장으로 다듬어줘(reason_suggestion). 카드와 대화에 없는 사실은 넣지 마.\n유형: ${d.type}\n처리: ${d.choice}\n이유: ${d.reason||'(비어 있음)'}\n예측: ${d.prediction||'없음'}\n근거: ${d.evidence.map(e=>e.kind+' '+e.label).join(', ')||'없음'}\n최근 대화:\n${chatText(chatsSinceLastCard((me()||{}).id,d.projectId).slice(-6))}`,CHECK_SCHEMA);
+    return {feedback:[...rules.filter(x=>x.startsWith('근거')),...r.feedback].slice(0,3),suggest:r.reason_suggestion,src:'claude'};
+  }catch(e){toast('AI 사수 연결 실패: '+aiErr(e));return {feedback:rules,suggest:'',src:'rule'}}
+}
+// ③ 결과·배운 점 초안
+async function draftNote(c){
+  const qs=qsOf(c.id).filter(q=>q.answer), v=verifOf(c);
+  const ctx=`판단: [${c.type} · ${c.choice}] ${c.reason}\n예측: ${c.prediction||'없음'}\n근거: ${(c.evidence||[]).map(e=>e.kind+' '+e.label).join(', ')||'없음'}\n멘토 코멘트: ${v&&v.comment||'없음'}\n받은 질문과 내 답: ${qs.map(q=>q.text+' → '+q.answer).join(' / ')||'없음'}\n연결 대화:\n${chatText((c.chatRefs||[]).map(id=>S.chats.find(m=>m.id===id)).filter(Boolean))}`;
+  if(aiKey()){try{
+    const r=await askJSON(`아래 판단 기록을 바탕으로 Decision Log의 '결과'(그래서 어떻게 됐나)와 '배운 점'(다음에 무엇을 다르게)을 각각 한두 문장 초안으로 써줘. 기록에 없는 결과는 지어내지 말고, 모르면 "(확인 필요)"라고 써.\n\n${ctx}`,NOTE_SCHEMA);
+    return Object.assign(r,{src:'claude'});
+  }catch(e){toast('AI 사수 연결 실패: '+aiErr(e))}}
+  const done=c.choice==='기각'?'AI 제안을 쓰지 않았다':c.choice==='채택'?'AI 제안을 그대로 반영했다':c.choice==='AI 미사용'?'직접 정했다':'AI 제안을 고쳐 반영했다';
+  return {result:((c.evidence||[]).length?`${c.evidence.map(e=>e.label||e.kind).join(', ')}을(를) 근거로 ${done}. `:`${done}. `)+'(결과 확인 필요)',
+    lesson:c.choice==='채택'?'다음에는 채택하기 전에 무엇으로 확인했는지 먼저 남기겠다.':'다음에는 AI 결과를 받기 전에 확인할 기준을 먼저 정해두겠다.',src:'rule'};
+}
+// ④ 과정 요약 초안
+async function draftSummary(uidv,pid){
+  const cs=S.cards.filter(c=>c.userId===uidv&&c.projectId===pid).sort(byTime), p=projById(pid);
+  if(!cs.length) return {text:'',src:'none'};
+  const lines=cs.map((c,i)=>{const n=latestNote(c);return `${i+1}. [${c.type}·${c.choice}${c.origin==='공유시간'?'·공유시간':''}] ${c.reason}${n?` / 결과: ${n.result} / 배운 점: ${n.lesson}`:''}`}).join('\n');
+  if(aiKey()){try{
+    const t=await askClaude(SASU_SYSTEM,[{role:'user',content:`프로젝트 "${p?p.title:''}"의 내 판단 기록이다. 이걸 바탕으로 Decision Log 맨 앞에 넣을 '과정 요약'을 5줄 이내로 써줘. 순서: 처음 문제 → 주요 판단 흐름 → 그 근거 → 바뀐 점 → 다음에 다르게 할 것. 기록에 없는 내용은 쓰지 마.\n\n${lines}`}]);
+    return {text:t,src:'claude'};
+  }catch(e){toast('AI 사수 연결 실패: '+aiErr(e))}}
+  const turns=cs.filter(c=>c.type==='방향 전환'||c.choice==='일부 수정'||c.choice==='기각');
+  return {text:`처음 문제: ${p?p.title:''} — "${cs[0].reason}"에서 출발했다.\n주요 판단: ${cs.length}건 중 AI 제안을 고치거나 버린 판단 ${cs.filter(c=>c.choice==='일부 수정'||c.choice==='기각').length}건, 방향 전환 ${cs.filter(c=>c.type==='방향 전환').length}건, 공유시간에서 나온 판단 ${cs.filter(c=>c.origin==='공유시간').length}건.\n핵심 판단: ${turns.slice(0,2).map(c=>'"'+c.reason+'"').join(', ')||'-'}\n근거: ${[...new Set(cs.flatMap(c=>(c.evidence||[]).map(e=>e.kind)))].join(', ')||'없음'}\n다음에는: (직접 작성)`,src:'rule'};
+}
+const DETECT=/(왜|빠졌|빠진|누락|틀렸|틀린|아니야|아닌데|대신|바꿔|바꾸|수정|출처|근거|확인해|맞아\?|이상해)/;
+function mentorName(q){if(q.mentorId==='ai')return {name:'AI 사수',tag:q.source==='claude'?'Claude':'기본 질문'};return userById(q.mentorId)||{name:'',tag:''}}
+
+/* ---------- storage ---------- */
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('라이브러리를 불러오지 못했습니다'));document.head.appendChild(s)})}
+const store={
+  async init(){
+    if(cfg.mode==='supabase'&&cfg.url&&cfg.key){
+      try{
+        if(!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
+        sb=window.supabase.createClient(cfg.url,cfg.key); await this.pull(); return;
+      }catch(e){ sb=null; cfg.mode='local'; saveJSON(CFG_KEY,cfg); toast('공유 DB 연결 실패, 로컬 모드로 전환: '+e.message); }
+    }
+    S=Object.assign(emptyState(),loadJSON(LS_KEY,{}));
+  },
+  async pull(){
+    const {data,error}=await sb.from('axproof_records').select('id,kind,data,created_at').order('created_at');
+    if(error) throw error;
+    const n=emptyState();
+    data.forEach(r=>{const c=COLL[r.kind]; if(c) n[c].push(Object.assign({},r.data,{id:r.id,createdAt:r.created_at}))});
+    S=n;
+  },
+  async add(kind,obj){
+    obj.id=obj.id||uid();
+    if(sb){
+      const {data,error}=await sb.from('axproof_records').insert({id:obj.id,kind,data:strip(obj)}).select('created_at');
+      if(error) throw error;
+      obj.createdAt=data[0].created_at;
+    } else obj.createdAt=new Date().toISOString();
+    S[COLL[kind]].push(obj); this.persist(); return obj;
+  },
+  async update(kind,obj){
+    if(kind==='card') throw new Error('판단 카드는 수정할 수 없습니다');
+    if(sb){const {error}=await sb.from('axproof_records').update({data:strip(obj),updated_at:new Date().toISOString()}).eq('id',obj.id); if(error) throw error;}
+    this.persist();
+  },
+  persist(){ if(!sb) saveJSON(LS_KEY,S); }
+};
+function strip(o){const r=Object.assign({},o);delete r.id;delete r.createdAt;return r}
+async function act(fn,okMsg){try{await fn(); if(okMsg) toast(okMsg); render();}catch(e){console.error(e);toast('오류: '+(e.message||e))}}
+
+/* ---------- lookups ---------- */
+const userById=id=>S.users.find(u=>u.id===id);
+const projById=id=>S.projects.find(p=>p.id===id);
+function me(){return userById(localStorage.getItem(ME_KEY))||null}
+const members=()=>S.users.filter(u=>u.role==='member');
+const teams=()=>[...new Set(members().map(u=>u.team).filter(Boolean))].sort();
+const cardsOf=uidv=>S.cards.filter(c=>c.userId===uidv).sort(byTime);
+const qsOf=cardId=>S.questions.filter(q=>q.cardId===cardId).sort(byTime);
+function verifOf(c){const v=S.verifs.filter(x=>x.cardId===c.id).sort(byTime);return v[v.length-1]}
+const lagMin=c=>c.occurredAt?Math.abs(new Date(c.createdAt)-new Date(c.occurredAt))/60000:0;
+const isRealtime=c=>lagMin(c)<=30;
+function passport(c){
+  const v=verifOf(c);
+  return [
+    ['시점', !isRealtime(c)?['사후 입력','mid']:(sb?['서버 기록','ok']:['기기 기록','ok'])],
+    ['근거', v&&v.evidence==='original'?['원본 확인','ok']:v&&v.evidence==='indirect'?['간접 증거','mid']:(c.evidence&&c.evidence.length?['첨부됨','mid']:['미첨부','no'])],
+    ['기여', v&&v.contribution==='demo'?['시연 확인','ok']:v&&v.contribution==='mentor'?['멘토 확인','ok']:['자기 진술','mid']],
+    ['결과', v&&v.result==='measured'?['실측','ok']:v&&v.result==='reviewed'?['검토','mid']:['미확인','no']]
+  ];
+}
+const passportHTML=c=>passport(c).map(([k,[t,cl]])=>`<span class="chip ${cl}">${k} ${t}</span>`).join(' ');
+function latestLevels(uidv){
+  const out={};
+  S.levels.filter(l=>l.userId===uidv).sort(byTime).forEach(l=>out[l.axis]=l.level);
+  return out;
+}
+const dots=(n,max=4)=>`<span class="dots">${Array.from({length:max},(_,i)=>`<i class="${i<n?'f':''}"></i>`).join('')}</span>`;
+function userStats(u){
+  const cs=cardsOf(u.id);
+  const rt=cs.length?Math.round(cs.filter(isRealtime).length/cs.length*100):0;
+  const verified=cs.filter(c=>{const v=verifOf(c);return v&&v.contribution!=='self'}).length;
+  const qs=S.questions.filter(q=>cs.some(c=>c.id===q.cardId));
+  const pendingQ=qs.filter(q=>!q.answer).length;
+  const last=cs.length?cs[cs.length-1].createdAt:null;
+  let status=['순조','ok'];
+  if(cs.length<2) status=['참여 저조','red'];
+  else if(pendingQ>0) status=['답변 대기','mid'];
+  else if(rt<50) status=['사후 입력 많음','mid'];
+  return {cs,rt,verified,qs,pendingQ,last,status};
+}
+
+/* ---------- navigation ---------- */
+const NAV={
+  member:[['work','판단 기록하기'],['mine','내 판단 기록'],['dl','DL 제출본 (PDF)'],['inbox','받은 질문'],['profile','내 역량 프로필']],
+  mentor:[['review','검토 대기'],['questions','보낸 질문'],['dash','운영 대시보드'],['profile','멤버 프로필'],['dl','멤버 DL 제출본']],
+  admin:[['dash','운영 대시보드'],['review','검토 대기'],['questions','보낸 질문'],['profile','멤버 프로필'],['dl','멤버 DL 제출본'],['people','멤버·프로젝트 관리'],['data','데이터·공유 설정']]
+};
+function go(v){view=v;ui.open=null;location.hash=v;render();scrollTo(0,0)}
+
+function renderSide(){
+  const u=me();
+  const opts=['member','mentor','admin'].map(r=>{
+    const us=S.users.filter(x=>x.role===r);
+    return us.length?`<optgroup label="${ROLE_LABEL[r]}">${us.map(x=>`<option value="${x.id}" ${u&&u.id===x.id?'selected':''}>${esc(x.name)}${x.tag?' · '+esc(x.tag):''}${x.team?' · '+esc(x.team):''}</option>`).join('')}</optgroup>`:'';
+  }).join('');
+  let nav='';
+  if(u){
+    const unanswered=u.role==='member'?S.questions.filter(q=>!q.answer&&cardsOf(u.id).some(c=>c.id===q.cardId)).length:0;
+    const pending=u.role!=='member'?S.cards.filter(c=>!verifOf(c)).length:0;
+    nav=`<div class="sec">${ROLE_LABEL[u.role]} 메뉴</div>`+NAV[u.role].map(([k,l])=>{
+      const b=(k==='inbox'&&unanswered)?`<span class="badge">${unanswered}</span>`:(k==='review'&&pending)?`<span class="badge">${pending}</span>`:'';
+      return `<a class="${view===k?'on':''}" data-go="${k}">${l}${b}</a>`}).join('');
+  }
+  document.getElementById('side').innerHTML=`
+    <div class="brand">AX Proof<small>링커스 시범 운영</small></div>
+    <div class="who"><label>현재 사용자</label>
+      <select id="meSel">${S.users.length?'':'<option>사용자 없음</option>'}${opts}</select></div>
+    <nav>${nav}</nav>
+    <div class="foot">${sb?'<b>공유 DB 연결됨</b><br>서버 시간으로 기록됩니다<br><a data-sync style="color:var(--light);cursor:pointer">새로고침</a>':'<b>로컬 저장 모드</b><br>이 브라우저에만 저장됩니다'}</div>`;
+}
+
+/* ---------- views ---------- */
+function vOnboard(){
+  return `<div class="hero"><h1>AX Proof 시범 운영</h1>
+    <p>멤버가 AI와 일하며 판단을 남기면, 운영진과 OB 멘토가 질문을 보내고 기여를 확인하는 플랫폼입니다.</p></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h2 style="margin-top:0">예시 데이터로 둘러보기</h2><p class="muted">링커스 2팀·3팀 가상 데이터로 모든 화면을 바로 체험합니다.</p><br><button class="btn" data-demo>예시 데이터 불러오기</button></div>
+      <div class="card"><h2 style="margin-top:0">빈 상태로 시작하기</h2><p class="muted">운영진 계정을 만들고 멤버와 프로젝트를 직접 등록합니다.</p>
+        <div class="fld"><label>운영진 이름</label><input id="obName" placeholder="예: 링커스 운영진"></div><br><button class="btn o" data-start>시작하기</button></div>
+    </div>`;
+}
+
+function vWork(u){
+  const projs=S.projects.filter(p=>!p.team||p.team===u.team);
+  if(!projs.length) return head('판단 기록하기','')+`<div class="card empty">참여 중인 프로젝트가 없습니다. 운영진에게 프로젝트 등록을 요청하세요.</div>`;
+  const d=ui.draft||(ui.draft={projectId:projs[0].id,type:'AI 검증',choice:'일부 수정',reason:'',prediction:'',occurred:localInput(new Date()),evidence:[{kind:'AI 대화',label:'',url:''}],correctsId:null,origin:'작업 중'});
+  const corr=d.correctsId?S.cards.find(c=>c.id===d.correctsId):null;
+  const recent=cardsOf(u.id).slice(-5).reverse();
+  const proj=projById(d.projectId);
+  const linked=new Set(S.cards.flatMap(c=>c.chatRefs||[]));
+  const msgs=S.chats.filter(m=>m.userId===u.id&&m.projectId===d.projectId).sort(byTime);
+  const chatHTML=`<div class="card">
+      <div class="row"><b>AI 작업 공간</b><span class="xs muted">${esc(proj?proj.title:'')}</span><span class="sp"></span><span class="chip ${aiKey()?'ok':'no'}">${aiKey()?'Claude 연결됨':'AI 미연결'}</span></div>
+      ${aiKey()?'':`<div class="panel" style="margin-top:10px;font-size:13.5px">Claude API 키를 넣으면 이 창에서 바로 AI와 작업하고, AI 사수가 대화를 읽고 판단 정리를 더 정확히 돕습니다. 키가 없으면 ChatGPT 등 다른 AI와 나눈 대화를 아래에 붙여넣어 기록하세요.
+        <div class="row" style="margin-top:8px"><input id="aiKeyIn" type="password" class="pill" style="flex:1;min-width:160px;cursor:text" placeholder="sk-ant-... (이 브라우저에만 저장)"><button class="btn sm" data-aisave>연결</button></div></div>`}
+      <div class="msgs" id="msgs">${msgs.length?msgs.map(m=>`<div class="msg ${m.role}"><span class="who">${m.role==='assistant'?'AI · Claude':m.role==='paste'?'외부 AI 대화 기록':'나'} · ${fmt(m.createdAt)}${linked.has(m.id)?' · 카드에 연결됨':''}</span>${esc(m.text)}
+        ${m.role!=='assistant'&&!linked.has(m.id)&&DETECT.test(m.text)?`<div style="margin-top:6px"><button class="chip ok" style="border:0;cursor:pointer" data-detect="${m.id}">판단 지점 감지됨 · 카드로 기록 →</button></div>`:''}</div>`).join(''):'<div class="empty">AI와 나눈 대화가 여기에 쌓이고, 판단 카드를 저장하면 직전 대화가 자동으로 연결됩니다.</div>'}
+        ${ui.thinking?'<div class="msg assistant"><span class="who">AI · Claude</span>답변을 쓰는 중…</div>':''}</div>
+      <div class="fld"><label>메시지</label><textarea id="chatIn" placeholder="${aiKey()?'AI에게 작업을 요청하세요 (Ctrl+Enter로 보내기)':'다른 AI와 나눈 대화를 붙여넣으세요'}">${esc(ui.chatDraft||'')}</textarea></div>
+      <div class="row" style="margin-top:10px">${aiKey()?`<button class="btn" data-chatsend ${ui.thinking?'disabled':''}>AI에게 보내기</button>`:''}<button class="btn ${aiKey()?'g':''} sm" data-chatpaste>다른 AI 대화로 기록</button></div>
+    </div>`;
+  const h=ui.helper||{};
+  const helperHTML=`<div class="card" style="margin-bottom:14px;border-top:4px solid var(--house)">
+      <div class="row"><b>AI 사수 · 정리 도우미</b><span class="sp"></span><span class="chip ${aiKey()?'ok':'no'}">${aiKey()?'Claude':'기본 모드'}</span></div>
+      <p class="s muted" style="margin-top:4px">판단은 내가 하고, AI 사수는 대화 속 판단을 찾아 카드로 정리하는 일을 돕습니다.</p>
+      <div class="row" style="margin-top:10px"><button class="btn o sm" data-aicand ${h.busy?'disabled':''}>대화에서 판단 후보 찾기</button><button class="btn o sm" data-aicheck ${h.busy?'disabled':''}>지금 쓰는 카드 점검</button></div>
+      ${h.busy?'<div class="hint">AI 사수가 정리하는 중…</div>':''}
+      ${h.cands?(h.cands.length?h.cands.map((c,i)=>`<div class="cand"><span class="chip ok">${esc(c.type)}</span> <span class="chip no">${esc(c.choice)}</span> ${esc(c.reason)}${c.evidence?`<div class="xs muted">근거 후보: ${esc(c.evidence)}</div>`:''}<div><button class="btn g sm" style="margin-top:6px" data-candfill="${i}">카드에 채우기</button></div></div>`).join(''):'<div class="hint">직전 카드 이후 대화에서 판단 후보를 찾지 못했습니다.</div>'):''}
+      ${h.check?`<div class="panel green">${h.check.feedback.length?`<ul style="padding-left:18px;font-size:14px">${h.check.feedback.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:'<div class="s">빠진 곳이 없습니다.</div>'}${h.check.suggest?`<div class="s" style="margin-top:8px"><b>이유 다듬기 제안</b><br>${esc(h.check.suggest)}</div><button class="btn sm" style="margin-top:8px" data-applyreason>제안을 이유 칸에 넣기</button>`:''}</div>`:''}
+    </div>`;
+  return head('판단 기록하기','AI와 작업하다 중요한 판단이 생기면 15초만 쓰세요. 저장하면 시각이 찍히고 수정할 수 없습니다. 이 기록이 그대로 Decision Log 제출본이 됩니다.')+`
+  <div class="split">
+    ${chatHTML}
+    <div>
+    ${helperHTML}
+    <div class="card">
+      ${corr?`<div class="panel" style="margin:0 0 10px">정정 기록입니다. 원본(${fmt(corr.createdAt)} "${esc(corr.reason)}")은 그대로 남고, 이 기록이 새로 추가됩니다. <a data-cancelcorr style="cursor:pointer">취소</a></div>`:''}
+      <div class="fld"><label>프로젝트</label><select data-d="projectId">${projs.map(p=>`<option value="${p.id}" ${d.projectId===p.id?'selected':''}>${esc(p.title)}</option>`).join('')}</select></div>
+      <div class="lbl">판단 유형</div>
+      <div class="pills" data-pick="type">${TYPES.map(t=>`<button class="pill ${d.type===t?'on':''}" data-v="${t}">${t}</button>`).join('')}</div>
+      <div class="lbl">AI의 제안을 어떻게 처리했나요?</div>
+      <div class="pills" data-pick="choice">${CHOICES.map(t=>`<button class="pill ${d.choice===t?'on':''}" data-v="${t}">${t}</button>`).join('')}</div>
+      <div class="lbl">어디서 나온 판단인가요?</div>
+      <div class="pills" data-pick="origin">${ORIGINS.map(t=>`<button class="pill ${d.origin===t?'on':''}" data-v="${t}">${t}</button>`).join('')}</div>
+      <div class="fld"><label>한 줄 이유 (필수)</label><input data-d="reason" value="${esc(d.reason)}" placeholder="예: AI 분류에서 응대 불만 14건이 빠져 4분류로 수정"></div>
+      <div class="fld"><label>AI를 보기 전 내 예측 (선택)</label><input data-d="prediction" value="${esc(d.prediction)}" placeholder="예: 배송 불만이 40% 이상일 확률 70%"></div>
+      <div class="lbl">근거 자료</div>
+      ${d.evidence.map((e,i)=>`<div class="row" style="margin-top:6px">
+        <select class="pill" data-ev="${i}" data-k="kind" style="padding:6px 10px">${EV_KINDS.map(k=>`<option ${e.kind===k?'selected':''}>${k}</option>`).join('')}</select>
+        <input class="pill" style="flex:1;min-width:120px;cursor:text" data-ev="${i}" data-k="label" value="${esc(e.label)}" placeholder="설명 (예: 표본 검증 시트)">
+        <input class="pill" style="flex:1;min-width:120px;cursor:text" data-ev="${i}" data-k="url" value="${esc(e.url)}" placeholder="링크 (구글 문서, AI 대화 공유 링크)">
+        <button class="btn g sm" data-evdel="${i}">삭제</button></div>`).join('')}
+      <button class="btn g sm" style="margin-top:8px" data-evadd>＋ 근거 추가</button>
+      <div class="fld"><label>판단이 일어난 시각</label><input type="datetime-local" data-d="occurred" value="${d.occurred}"></div>
+      <div class="hint">지금과 30분 넘게 차이 나면 '사후 입력'으로 표시됩니다. 그래도 솔직하게 적는 것이 좋습니다.</div>
+      <button class="btn" style="width:100%;justify-content:center;margin-top:16px;padding:11px" data-savecard>저장 (원본 잠금)</button>
+      <div class="hint">저장하면 이 프로젝트에서 직전 카드 이후 나눈 AI 대화가 자동으로 연결됩니다.</div>
+    </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 style="margin-top:0">최근 내 판단</h2>
+    ${recent.length?recent.map(c=>cardItem(c,{compact:true})).join(''):'<div class="empty">아직 기록이 없습니다.</div>'}
+  </div>`;
+}
+
+function cardItem(c,opt={}){
+  const a=userById(c.userId), p=projById(c.projectId), qs=qsOf(c.id), v=verifOf(c);
+  const corr=c.correctsId?S.cards.find(x=>x.id===c.correctsId):null;
+  return `<div class="item">
+    <div class="meta"><b style="color:var(--ink)">${esc(a?a.name:'?')}</b>${a&&a.team?`<span>${esc(a.team)}</span>`:''}<span>${esc(p?p.title:'')}</span><span>기록 ${fmt(c.createdAt)}</span>${!isRealtime(c)?`<span>판단 ${fmt(c.occurredAt)}</span>`:''}</div>
+    <div class="ttl"><span class="chip ok">${esc(c.type)}</span> <span class="chip no">${esc(c.choice)}</span>${c.origin&&c.origin!=='작업 중'?` <span class="chip mid">${esc(c.origin)}</span>`:''} ${esc(c.reason)}</div>
+    ${corr?`<div class="xs muted">↳ 정정: ${fmt(corr.createdAt)} 기록 "${esc(corr.reason)}"을 고침</div>`:''}
+    ${c.prediction?`<div class="s muted">예측: ${esc(c.prediction)}</div>`:''}
+    ${(()=>{const n=latestNote(c);return n?`<div class="s" style="margin-top:4px"><b>결과</b> ${esc(n.result||'-')} · <b>배운 점</b> ${esc(n.lesson||'-')} <span class="xs muted">(${fmt(n.createdAt)} 추가${n.aiAssisted?' · AI 사수 초안 기반':''})</span></div>`:''})()}
+    ${c.evidence&&c.evidence.length?`<div class="ev">${c.evidence.map(e=>e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener">📎 ${esc(e.kind)} · ${esc(e.label||'링크')}</a>`:`<span class="s muted">📎 ${esc(e.kind)} · ${esc(e.label)}</span>`).join(' ')}</div>`:''}
+    ${c.chatRefs&&c.chatRefs.length?`<details class="chatref"><summary>💬 연결된 AI 대화 ${c.chatRefs.length}개</summary>${c.chatRefs.map(id=>S.chats.find(m=>m.id===id)).filter(Boolean).map(m=>`<div class="cm ${m.role}"><b>${m.role==='assistant'?'AI':m.role==='paste'?'외부 AI 기록':'나'}</b> · ${fmt(m.createdAt)}<br>${esc(m.text)}</div>`).join('')}</details>`:''}
+    <div style="margin-top:6px">${passportHTML(c)}</div>
+    ${v&&v.comment?`<div class="xs muted" style="margin-top:4px">멘토 코멘트: ${esc(v.comment)}</div>`:''}
+    ${!opt.compact?qs.map(qaHTML).join(''):(qs.length?`<div class="xs muted" style="margin-top:4px">질문 ${qs.length}개 · 답변 ${qs.filter(q=>q.answer).length}개</div>`:'')}
+    ${opt.actions||''}
+  </div>`;
+}
+function qaHTML(q){
+  const m=mentorName(q);
+  return `<div class="qa"><div class="q">Q. ${esc(q.text)} <span class="xs muted">— ${esc(m?m.name:'')}${m&&m.tag?' ('+esc(m.tag)+')':''} · ${fmt(q.createdAt)}</span></div>
+    ${q.answer?`<div class="a">A. ${esc(q.answer)} <span class="xs muted">· 응답 ${q.responseSec}초 · ${fmt(q.answeredAt)}${q.ack?' · 멘토 확인':''}</span></div>`:'<div class="a xs muted">답변 대기 중</div>'}</div>`;
+}
+
+function vInbox(u){
+  const mine=cardsOf(u.id).map(c=>c.id);
+  const qs=S.questions.filter(q=>mine.includes(q.cardId)).sort(byTime).reverse();
+  const open=qs.filter(q=>!q.answer), done=qs.filter(q=>q.answer);
+  return head('받은 질문','멘토가 내 판단에 질문을 보냈습니다. "답변 시작"을 누른 순간부터 응답 시간이 기록됩니다.')+`
+  <div class="card"><h2 style="margin-top:0">답변할 질문 ${open.length}개</h2>
+    ${open.length?open.map(q=>{
+      const c=S.cards.find(x=>x.id===q.cardId), m=mentorName(q);
+      return `<div class="item"><div class="meta">${esc(m?m.name:'')}${m&&m.tag?' · '+esc(m.tag):''} · ${fmt(q.createdAt)}</div>
+        <div class="xs muted">내 판단: [${esc(c.type)}] ${esc(c.reason)}</div>
+        <div class="ttl" style="font-size:16px">Q. ${esc(q.text)}</div>
+        ${q.openedAt?`<div class="fld"><label>답변 · 경과 <span class="timer" data-since="${q.openedAt}">0초</span></label><textarea id="ans-${q.id}" placeholder="생각나는 대로, 내 말로 답해주세요"></textarea></div>
+          <button class="btn" style="margin-top:10px" data-answer="${q.id}">답변 보내기</button>`
+        :`<button class="btn o" data-openq="${q.id}">답변 시작</button>`}
+      </div>`}).join(''):'<div class="empty">새 질문이 없습니다.</div>'}
+  </div>
+  <div class="card" style="margin-top:14px"><h2 style="margin-top:0">답변 완료 ${done.length}개</h2>
+    ${done.length?done.map(q=>{const c=S.cards.find(x=>x.id===q.cardId);return `<div class="item"><div class="xs muted">[${esc(c.type)}] ${esc(c.reason)}</div>${qaHTML(q)}</div>`}).join(''):'<div class="empty">아직 없습니다.</div>'}
+  </div>`;
+}
+
+function vMine(u){
+  const projs=[...new Set(cardsOf(u.id).map(c=>c.projectId))];
+  const pid=ui.mineProj&&projs.includes(ui.mineProj)?ui.mineProj:projs[0];
+  ui.mineProjCur=pid;
+  if(!pid) return head('내 판단 기록','')+'<div class="card empty">아직 기록이 없습니다. "판단 기록하기"에서 첫 카드를 남겨보세요.</div>';
+  const cs=cardsOf(u.id).filter(c=>c.projectId===pid).reverse();
+  const sm=latestSummary(u.id,pid), sd=ui.sumDraft;
+  const noEv=cs.filter(c=>!(c.evidence||[]).length), noNote=cs.filter(c=>!latestNote(c)), late=cs.filter(c=>!isRealtime(c));
+  const noteForm=c=>{
+    const n=ui.noteDraft&&ui.noteDraft.cardId===c.id?ui.noteDraft:(latestNote(c)||{});
+    return `<div class="panel green"><div class="row"><b class="s">결과 · 배운 점 추가</b><span class="sp"></span><button class="btn o sm" data-notedraft="${c.id}" ${ui.noteBusy?'disabled':''}>${ui.noteBusy?'초안 쓰는 중…':'AI 사수에게 초안 받기'}</button></div>
+      <div class="fld"><label>결과 · 그래서 어떻게 됐나</label><textarea id="nRes">${esc(n.result||'')}</textarea></div>
+      <div class="fld"><label>배운 점 · 다음에 무엇을 다르게</label><textarea id="nLes">${esc(n.lesson||'')}</textarea></div>
+      <div class="hint">판단 카드 원본은 그대로 두고, 이 내용은 지금 시각으로 덧붙여 기록됩니다. AI 초안은 내 말로 고친 뒤 저장하세요.</div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-notesave="${c.id}">저장</button><button class="btn g sm" data-noteopen="${c.id}">닫기</button></div></div>`;
+  };
+  return `<div class="head"><div><h1>내 판단 기록</h1><p>판단 카드는 수정할 수 없습니다. 결과·배운 점은 나중에 덧붙이고, 고칠 내용은 "정정 기록"으로 추가하세요.</p></div>
+    <div class="row">${projs.length>1?`<select class="pill" data-mineproj style="padding:6px 12px">${projs.map(p=>`<option value="${p}" ${p===pid?'selected':''}>${esc((projById(p)||{}).title||'')}</option>`).join('')}</select>`:''}<button class="btn" data-go="dl">DL 제출본 보기 · PDF</button></div></div>
+  <div class="grid g2">
+    <div class="card" style="border-top:4px solid var(--house)">
+      <div class="row"><b>AI 사수 · 과정 정리</b><span class="sp"></span><span class="chip ${aiKey()?'ok':'no'}">${aiKey()?'Claude':'기본 모드'}</span></div>
+      <p class="s muted" style="margin-top:4px">DL 제출본 맨 앞에 들어갈 과정 요약입니다. AI 사수가 내 기록만으로 초안을 쓰고, 내가 고쳐서 확정합니다.</p>
+      ${sd||!sm?`<div class="fld"><label>과정 요약 (처음 문제 → 주요 판단 → 근거 → 바뀐 점 → 다음에)</label><textarea id="sumText" style="min-height:130px">${esc(sd?sd.text:'')}</textarea></div>
+        <div class="row" style="margin-top:10px"><button class="btn o sm" data-aisum ${ui.sumBusy?'disabled':''}>${ui.sumBusy?'초안 쓰는 중…':'AI 사수에게 초안 받기'}</button><button class="btn sm" data-sumsave>내 요약으로 저장</button></div>`
+       :`<div class="sum" style="white-space:pre-wrap">${esc(sm.text)}</div><div class="xs muted" style="margin-top:6px">${fmt(sm.createdAt)} 저장${sm.aiAssisted?' · AI 사수 초안을 검토·수정':''}</div>
+        <div class="row" style="margin-top:10px"><button class="btn o sm" data-aisum ${ui.sumBusy?'disabled':''}>${ui.sumBusy?'초안 쓰는 중…':'새 초안 받아 다시 쓰기'}</button></div>`}
+    </div>
+    <div class="card">
+      <b>제출 전 점검</b>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>판단 카드</span><b>${cs.length}건</b></div>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>근거가 없는 카드</span><span class="chip ${noEv.length?'mid':'ok'}">${noEv.length}건</span></div>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>결과·배운 점이 빈 카드</span><span class="chip ${noNote.length?'mid':'ok'}">${noNote.length}건</span></div>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>사후 입력으로 표시된 카드</span><span class="chip ${late.length?'mid':'ok'}">${late.length}건</span></div>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>과정 요약</span><span class="chip ${sm?'ok':'mid'}">${sm?'작성됨':'미작성'}</span></div>
+      <p class="hint">빈 칸이 있어도 제출본은 만들어지며, 빈 칸은 "미작성"으로 표시됩니다.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">${cs.map(c=>cardItem(c,{actions:`<div class="row" style="margin-top:8px"><button class="btn o sm" data-noteopen="${c.id}">${latestNote(c)?'결과·배운 점 고쳐 쓰기':'결과·배운 점 쓰기'}</button><button class="btn g sm" data-correct="${c.id}">정정 기록 추가</button></div>${ui.noteOpen===c.id?noteForm(c):''}`})).join('')}</div>`;
+}
+
+function vDL(u){
+  const target=u.role==='member'?u:(userById(ui.profileUser)||members()[0]);
+  if(!target) return head('DL 제출본','')+'<div class="card empty">멤버가 없습니다.</div>';
+  const projs=[...new Set(cardsOf(target.id).map(c=>c.projectId))];
+  const pid=ui.dlProj&&projs.includes(ui.dlProj)?ui.dlProj:projs[0];
+  const cs=cardsOf(target.id).filter(c=>c.projectId===pid);
+  const p=projById(pid)||{}, sm=latestSummary(target.id,pid);
+  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'-';
+  const miss='<span class="miss">미작성</span>';
+  const tools=`<div class="head noprint"><div><h1>DL 제출본</h1><p>판단 기록을 Decision Log 5칸(결정 · 이유 · AI 활용 · 결과 · 배운 점) 형식으로 묶었습니다. 인쇄 창에서 대상을 "PDF로 저장"으로 고르면 제출용 PDF가 됩니다.</p></div>
+    <div class="row">${u.role!=='member'?`<select class="pill" data-profsel style="padding:6px 12px">${members().map(m=>`<option value="${m.id}" ${m.id===target.id?'selected':''}>${esc(m.name)} · ${esc(m.team||'')}</option>`).join('')}</select>`:''}
+    ${projs.length>1?`<select class="pill" data-dlproj style="padding:6px 12px">${projs.map(x=>`<option value="${x}" ${x===pid?'selected':''}>${esc((projById(x)||{}).title||'')}</option>`).join('')}</select>`:''}
+    ${u.role==='member'?'<button class="btn o sm" data-go="mine">빈 칸 채우러 가기</button>':''}<button class="btn" data-dlprint ${cs.length?'':'disabled'}>인쇄 · PDF 저장</button></div></div>`;
+  if(!cs.length) return tools+'<div class="card empty">아직 판단 기록이 없습니다.</div>';
+  const first=cs[0].createdAt, last=cs[cs.length-1].createdAt;
+  return tools+`<article class="dl">
+    <header class="dlh">
+      <div class="dlk">LINK·US 20기 · AI:Go 개인 프로젝트 · Decision Log</div>
+      <h2>${esc(p.title||'')}</h2>
+      <div class="dlmeta">${esc(target.name)}${target.team?' · '+esc(target.team):''} · 기간 ${fmtD(first)} ~ ${fmtD(last)} · 판단 ${cs.length}건 · 내보낸 시각 ${fmt(new Date().toISOString())} · 시각 기준 ${sb?'서버 시간':'기기 시간'}</div>
+    </header>
+    <div class="dlstats">
+      <div><b>${pct(cs.filter(isRealtime).length,cs.length)}</b><span>판단 직후 기록</span></div>
+      <div><b>${pct(cs.filter(c=>(c.evidence||[]).length).length,cs.length)}</b><span>근거 연결</span></div>
+      <div><b>${pct(cs.filter(c=>latestNote(c)).length,cs.length)}</b><span>결과·배운 점 작성</span></div>
+      <div><b>${cs.filter(c=>c.origin==='공유시간').length}건</b><span>공유시간에서 나온 판단</span></div>
+    </div>
+    ${sm?`<section class="dlsum"><h3>과정 요약</h3><p>${esc(sm.text).replace(/\n/g,'<br>')}</p><div class="dlnote">${fmt(sm.createdAt)} 작성${sm.aiAssisted?' · AI 사수 초안을 본인이 검토·수정':''}</div></section>`:''}
+    ${cs.map((c,i)=>{
+      const n=latestNote(c), v=verifOf(c), corr=c.correctsId?S.cards.find(x=>x.id===c.correctsId):null;
+      const chats=(c.chatRefs||[]).map(id=>S.chats.find(m=>m.id===id)).filter(Boolean);
+      const mine=chats.filter(m=>m.role!=='assistant').slice(-2);
+      const qs=qsOf(c.id).filter(q=>q.answer);
+      return `<section class="dlc">
+        <div class="dlch"><b>판단 ${i+1}</b><span>${esc(c.type)} · ${esc(c.choice)}</span>${c.origin&&c.origin!=='작업 중'?`<span class="chip mid">${esc(c.origin)}</span>`:''}<span class="sp"></span><span class="dlnote">기록 ${fmt(c.createdAt)}${!isRealtime(c)?` · 판단 ${fmt(c.occurredAt)} (사후 입력)`:''}</span></div>
+        <table class="dlt">
+          <tr><th>결정</th><td>${esc(c.type)} — AI 제안 ${esc(c.choice)}${corr?`<div class="dlnote">${fmt(corr.createdAt)} 기록 "${esc(corr.reason)}"을 정정한 기록</div>`:''}</td></tr>
+          <tr><th>이유</th><td>${esc(c.reason)}${c.prediction?`<div class="dlnote">AI를 보기 전 예측: ${esc(c.prediction)}</div>`:''}</td></tr>
+          <tr><th>AI 활용</th><td>${chats.length?`연결된 AI 대화 ${chats.length}개${mine.map(m=>`<div class="dlq">“${esc(m.text.slice(0,140))}”</div>`).join('')}`:c.choice==='AI 미사용'?'AI 미사용':'연결된 대화 없음'}</td></tr>
+          <tr><th>결과</th><td>${n&&n.result?esc(n.result):miss}${(c.evidence||[]).length?`<div class="dlnote">근거: ${c.evidence.map(e=>esc(e.kind)+' · '+(e.url?`<a href="${esc(e.url)}">${esc(e.label||'링크')}</a>`:esc(e.label))).join(' / ')}</div>`:'<div class="dlnote">근거: 없음</div>'}</td></tr>
+          <tr><th>배운 점</th><td>${n&&n.lesson?esc(n.lesson):miss}${n?`<div class="dlnote">${fmt(n.createdAt)} 추가${n.aiAssisted?' · AI 사수 초안 기반':''}</div>`:''}${qs.map(q=>`<div class="dlq">Q. ${esc(q.text)} → ${esc(q.answer)}</div>`).join('')}</td></tr>
+        </table>
+        <div class="dlpp">${passportHTML(c)}${v&&v.comment?` <span class="dlnote">멘토: ${esc(v.comment)}</span>`:''}</div>
+      </section>`}).join('')}
+    <footer class="dlf">AX Proof에서 생성한 Decision Log입니다. 판단 카드는 저장 시각에 잠겨 수정할 수 없고, 결과·배운 점·과정 요약은 각각의 작성 시각과 함께 덧붙여 기록됩니다. "AI 사수 초안"으로 표시된 부분은 AI가 기록을 정리한 초안을 본인이 검토해 저장한 것입니다.</footer>
+  </article>`;
+}
+
+function vReview(u){
+  const f=ui.filter;
+  let cs=S.cards.slice().sort(byTime).reverse();
+  const hasOpenQ=c=>qsOf(c.id).some(q=>!q.answer);
+  if(f==='pending') cs=cs.filter(c=>!verifOf(c)&&!hasOpenQ(c));
+  if(f==='asked') cs=cs.filter(hasOpenQ);
+  if(f==='done') cs=cs.filter(c=>verifOf(c));
+  if(ui.team) cs=cs.filter(c=>{const a=userById(c.userId);return a&&a.team===ui.team});
+  const cnt=k=>({pending:S.cards.filter(c=>!verifOf(c)&&!hasOpenQ(c)).length,asked:S.cards.filter(hasOpenQ).length,done:S.cards.filter(c=>verifOf(c)).length,all:S.cards.length})[k];
+  return head('검토 대기','멤버의 판단을 근거와 함께 보고, 질문을 보내거나 기여를 확인하세요.')+`
+  <div class="row" style="margin-bottom:12px">
+    <div class="pills" data-filter>${[['pending','검토 대기'],['asked','질문 진행 중'],['done','확인 완료'],['all','전체']].map(([k,l])=>`<button class="pill ${f===k?'on':''}" data-v="${k}">${l} ${cnt(k)}</button>`).join('')}</div>
+    <span class="sp"></span>${teamSelect()}
+  </div>
+  <div class="card">${cs.length?cs.map(c=>cardItem(c,{actions:reviewActions(c,u)})).join(''):'<div class="empty">해당하는 판단이 없습니다.</div>'}</div>`;
+}
+function teamSelect(){return `<select class="pill" data-team style="padding:6px 12px"><option value="">모든 팀</option>${teams().map(t=>`<option ${ui.team===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`}
+function reviewActions(c,u){
+  const o=ui.open&&ui.open.id===c.id?ui.open.kind:null;
+  const a=userById(c.userId);
+  let panel='';
+  if(o==='ask'){
+    const sug=[...(QUESTION_BANK[c.type]||[]),...COMMON_Q];
+    panel=`<div class="panel"><div class="lbl" style="margin-top:0">추천 질문 (눌러서 넣기)</div>
+      <div class="pills">${sug.map(s=>`<button class="pill" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+      <div class="fld"><label>질문</label><textarea id="qtext" placeholder="멤버가 그 자리에서 자기 말로 답해야 하는 질문이 좋습니다"></textarea></div>
+      <div class="row" style="margin-top:10px"><button class="btn" data-sendq="${c.id}">질문 보내기</button><button class="btn g" data-close>닫기</button></div></div>`;
+  }
+  if(o==='verify'){
+    const team=a&&a.team?members().filter(m=>m.team===a.team):[a];
+    panel=`<div class="panel green"><div class="grid g3">
+      <div class="fld"><label>근거</label><select id="vEv"><option value="original">원본 확인</option><option value="indirect">간접 증거</option><option value="none">확인 불가</option></select></div>
+      <div class="fld"><label>기여</label><select id="vCo"><option value="mentor">멘토 확인</option><option value="demo">시연·재현 확인</option><option value="self">자기 진술 유지</option></select></div>
+      <div class="fld"><label>결과</label><select id="vRe"><option value="reviewed">검토</option><option value="measured">실측</option><option value="none">미확인</option></select></div></div>
+      <div class="lbl">이 판단에 누가 기여했나요?</div>
+      ${team.filter(Boolean).map(m=>`<div class="row" style="margin:4px 0"><span style="width:90px">${esc(m.name)}</span>
+        <select class="pill" data-contrib="${m.id}" style="padding:4px 10px"><option value="${m.id===c.userId?'lead':'none'}">${m.id===c.userId?'주도':'없음'}</option><option value="lead">주도</option><option value="co">공동</option><option value="none">없음</option></select></div>`).join('')}
+      <div class="fld"><label>코멘트 (선택)</label><input id="vCm" placeholder="예: 검증 시트 원본 확인, 표본 기준 명확"></div>
+      <div class="row" style="margin-top:10px"><button class="btn" data-verify="${c.id}">확인 저장</button><button class="btn g" data-close>닫기</button></div></div>`;
+  }
+  if(o==='level'){
+    const lv=latestLevels(c.userId);
+    panel=`<div class="panel green"><div class="lbl" style="margin-top:0">${esc(a.name)}의 판단 수준 (1~4, 지금까지의 기록 기준)</div>
+      <div class="grid g3">${AXES.map(x=>`<div class="fld"><label>${x}</label><select data-axis="${x}"><option value="">평가 안 함</option><option value="0" ${lv[x]===0?'selected':''}>미관찰</option>${[1,2,3,4].map(n=>`<option value="${n}" ${lv[x]===n?'selected':''}>${n}수준</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="hint">근거 검증 예: 1 확인 없이 채택 · 2 일부 확인 · 3 독립 자료로 검증 후 수정 · 4 검증 절차를 먼저 설계</div>
+      <div class="row" style="margin-top:10px"><button class="btn" data-savelevel="${c.userId}">평가 저장</button><button class="btn g" data-close>닫기</button></div></div>`;
+  }
+  const answered=qsOf(c.id).filter(q=>q.answer&&!q.ack);
+  return `<div class="row" style="margin-top:8px">
+    <button class="btn o sm" data-open="ask:${c.id}">질문 보내기</button>
+    <button class="btn sm" data-open="verify:${c.id}">${verifOf(c)?'다시 확인':'기여 확인'}</button>
+    <button class="btn g sm" data-open="level:${c.id}">역량 평가</button>
+    ${answered.map(q=>`<button class="btn g sm" data-ack="${q.id}">답변 확인 표시</button>`).join('')}
+  </div>${panel}`;
+}
+
+function vQuestions(u){
+  const qs=S.questions.slice().sort(byTime).reverse();
+  const mineOnly=u.role==='mentor';
+  const list=mineOnly?qs.filter(q=>q.mentorId===u.id):qs;
+  const ans=list.filter(q=>q.answer);
+  const avg=ans.length?Math.round(ans.reduce((s,q)=>s+q.responseSec,0)/ans.length):0;
+  return head(mineOnly?'내가 보낸 질문':'전체 질문',`응답률 ${list.length?Math.round(ans.length/list.length*100):0}% · 평균 응답 ${avg}초`)+
+  `<div class="card">${list.length?list.map(q=>{const c=S.cards.find(x=>x.id===q.cardId),a=c&&userById(c.userId);
+    return `<div class="item"><div class="meta"><b style="color:var(--ink)">${esc(a?a.name:'')}</b><span>[${esc(c?c.type:'')}] ${esc(c?c.reason:'')}</span></div>${qaHTML(q)}
+    ${q.answer&&!q.ack?`<button class="btn g sm" style="margin-top:6px" data-ack="${q.id}">답변 확인 표시</button>`:''}</div>`}).join(''):'<div class="empty">보낸 질문이 없습니다.</div>'}</div>`;
+}
+
+function weekStart(d){const x=new Date(d);x.setHours(0,0,0,0);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x}
+function vDash(u){
+  const ms=members().filter(m=>!ui.team||m.team===ui.team);
+  const ids=ms.map(m=>m.id);
+  const cs=S.cards.filter(c=>ids.includes(c.userId));
+  const rt=cs.length?Math.round(cs.filter(isRealtime).length/cs.length*100):0;
+  const ver=cs.filter(c=>{const v=verifOf(c);return v&&v.contribution!=='self'}).length;
+  const qs=S.questions.filter(q=>cs.some(c=>c.id===q.cardId)), ans=qs.filter(q=>q.answer);
+  const avg=ans.length?Math.round(ans.reduce((s,q)=>s+q.responseSec,0)/ans.length):0;
+  // weekly
+  const now=weekStart(new Date()); const weeks=[];
+  for(let i=5;i>=0;i--){const s=new Date(now);s.setDate(s.getDate()-7*i);weeks.push(s)}
+  const wk=weeks.map(s=>{const e=new Date(s);e.setDate(e.getDate()+7);const w=cs.filter(c=>{const t=new Date(c.createdAt);return t>=s&&t<e});return {s,n:w.length,rt:w.length?Math.round(w.filter(isRealtime).length/w.length*100):null}});
+  const maxN=Math.max(1,...wk.map(w=>w.n));
+  const tc=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]); const maxT=Math.max(1,...tc.map(x=>x[1]));
+  // matrix
+  const mt=ui.team||teams()[0]||'';
+  const tm=members().filter(m=>m.team===mt);
+  const tcards=S.cards.filter(c=>tm.some(m=>m.id===c.userId)&&verifOf(c)).sort(byTime).slice(-8);
+  return head('운영 대시보드','기수 전체의 기록, 검증, 질문 현황입니다. 모든 숫자는 입력된 데이터로 실시간 계산됩니다.')+`
+  <div class="row" style="margin-bottom:12px">${teamSelect()}<span class="sp"></span><button class="btn o sm noprint" onclick="print()">인쇄·PDF</button></div>
+  <div class="grid g4">
+    <div class="card kpi"><div class="l">참여 멤버</div><div class="v">${ms.length}명</div><div class="n">${teams().length}개 팀</div></div>
+    <div class="card kpi"><div class="l">실시간 기록률</div><div class="v">${rt}%</div><div class="n">판단 후 30분 안에 기록</div></div>
+    <div class="card kpi"><div class="l">멘토 확인 판단</div><div class="v">${ver}건</div><div class="n">전체 ${cs.length}건 중</div></div>
+    <div class="card kpi"><div class="l">질문 응답</div><div class="v">${ans.length}/${qs.length}</div><div class="n">평균 응답 ${avg}초</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><b>주차별 판단 기록</b> <span class="xs muted">막대 위 숫자는 실시간 기록률</span>
+      <div class="wk">${wk.map(w=>`<div><b>${w.rt===null?'':w.rt+'%'}</b><i style="height:${Math.round(w.n/maxN*100)}%"></i>${fmtD(w.s)}주 · ${w.n}</div>`).join('')}</div></div>
+    <div class="card"><b>판단 유형 분포</b> <span class="xs muted">${cs.length}건</span>
+      ${tc.map(([t,n])=>`<div class="hbar"><span>${t}</span><div class="t"><div class="f" style="width:${Math.round(n/maxT*100)}%"></div></div><em>${n}</em></div>`).join('')}</div>
+    <div class="card"><b>${esc(mt||'팀')} 기여 지도</b> <span class="xs muted">멘토가 확인한 판단 기준</span>
+      ${tcards.length?`<div class="tbw"><table class="mx"><tr><th></th>${tcards.map(c=>`<th title="${esc(c.reason)}">${esc(c.type)}<br><span style="font-weight:400">${esc(c.reason.slice(0,8))}…</span></th>`).join('')}</tr>
+      ${tm.map(m=>`<tr><td class="n">${esc(m.name)}</td>${tcards.map(c=>{const v=verifOf(c);const lv=v.contributors&&v.contributors[m.id];return lv==='lead'?'<td class="lead">주도</td>':lv==='co'?'<td class="co">공동</td>':'<td class="none">-</td>'}).join('')}</tr>`).join('')}</table></div>
+      ${tm.filter(m=>!tcards.some(c=>{const v=verifOf(c);return v.contributors&&v.contributors[m.id]&&v.contributors[m.id]!=='none'})).map(m=>`<div class="xs" style="color:var(--red);margin-top:6px">${esc(m.name)}: 확인된 기여 없음 → 면담 권장</div>`).join('')}`:'<div class="empty">멘토가 확인한 판단이 아직 없습니다.</div>'}</div>
+    <div class="card"><b>멤버 현황</b>
+      <div class="tbw"><table class="tb"><tr><th>이름</th><th>팀</th><th>기록</th><th>실시간</th><th>확인</th><th>근거 검증</th><th>상태</th></tr>
+      ${ms.map(m=>{const st=userStats(m),lv=latestLevels(m.id);return `<tr><td><a style="cursor:pointer" data-prof="${m.id}">${esc(m.name)}</a></td><td>${esc(m.team||'')}</td><td>${st.cs.length}</td><td>${st.cs.length?st.rt+'%':'-'}</td><td>${st.verified}</td><td>${lv['근거 검증']?dots(lv['근거 검증']):'<span class="xs muted">-</span>'}</td><td><span class="chip ${st.status[1]}">${st.status[0]}</span></td></tr>`}).join('')}
+      </table></div></div>
+  </div>`;
+}
+
+function vProfile(u){
+  let target=u.role==='member'?u:userById(ui.profileUser)||members()[0];
+  if(!target) return head('역량 프로필','')+'<div class="card empty">멤버가 없습니다.</div>';
+  const st=userStats(target), lv=latestLevels(target.id);
+  const contribs=S.cards.map(c=>{const v=verifOf(c);const l=v&&v.contributors&&v.contributors[target.id];return l&&l!=='none'?{c,l,v}:null}).filter(Boolean);
+  const reps=st.cs.filter(c=>verifOf(c)).slice(-3).reverse();
+  const picker=u.role!=='member'?`<select class="pill noprint" data-profsel style="padding:6px 12px">${members().map(m=>`<option value="${m.id}" ${m.id===target.id?'selected':''}>${esc(m.name)} · ${esc(m.team||'')}</option>`).join('')}</select>`:'';
+  const strengths=AXES.filter(x=>lv[x]>=3), weak=AXES.filter(x=>lv[x]&&lv[x]<=2);
+  return `<div class="head"><div><h1>${esc(target.name)}의 역량 프로필</h1><p>${esc(target.cohort||'링커스')} · ${esc(target.team||'')} · 근거가 연결된 판단 기록으로 만든 1페이지</p></div><div class="row noprint">${picker}<button class="btn o sm" onclick="print()">인쇄·PDF</button></div></div>
+  <div class="card">
+    <div class="row"><span class="chip ok">판단 기록 ${st.cs.length}건</span><span class="chip ok">멘토 확인 ${st.verified}건</span><span class="chip ${st.rt>=70?'ok':'mid'}">실시간 기록률 ${st.rt}%</span><span class="chip no">받은 질문 ${st.qs.length} · 답변 ${st.qs.filter(q=>q.answer).length}</span></div>
+    ${(strengths.length||weak.length)?`<div class="sum"><b>요약</b> · ${strengths.length?`강점: ${strengths.join(', ')}`:''}${strengths.length&&weak.length?' / ':''}${weak.length?`보완: ${weak.join(', ')}`:''}</div>`:''}
+    <div class="grid g2" style="margin-top:16px">
+      <div>
+        <div class="lbl" style="margin-top:0">판단 수준 (멘토 평가, 1~4)</div>
+        ${AXES.map(x=>`<div class="lvl"><span class="muted">${x}</span>${lv[x]?dots(lv[x]):'<span class="xs muted">미관찰</span>'}<b>${lv[x]||''}</b></div>`).join('')}
+        <div class="lbl">실제 기여 범위</div>
+        ${contribs.length?contribs.map(({c,l})=>`<div class="lvl" style="grid-template-columns:1fr auto"><span>[${esc(c.type)}] ${esc(c.reason)}</span><span class="chip ${l==='lead'?'ok':'mid'}">${l==='lead'?'주도':'공동'} · 멘토 확인</span></div>`).join(''):'<div class="xs muted">멘토가 확인한 기여가 아직 없습니다.</div>'}
+      </div>
+      <div>
+        <div class="lbl" style="margin-top:0">대표 판단</div>
+        ${reps.length?reps.map(c=>`<div class="card" style="box-shadow:none;border:1px solid var(--hair);margin-bottom:8px;padding:14px">
+          <div class="xs muted">${fmt(c.createdAt)} 기록 · ${esc((projById(c.projectId)||{}).title||'')}</div>
+          <div style="font-weight:600;margin:4px 0">[${esc(c.type)} · ${esc(c.choice)}] ${esc(c.reason)}</div>
+          <div>${passportHTML(c)}</div>${qsOf(c.id).filter(q=>q.answer).slice(0,1).map(qaHTML).join('')}</div>`).join(''):'<div class="xs muted">멘토가 확인한 판단이 생기면 여기에 표시됩니다.</div>'}
+        ${reps.length?`<div class="sum"><b>면접 추천 질문</b><br>"${esc(reps[0].reason)}" — 이 판단을 내릴 때 고려한 대안과, 그 대안을 버린 이유를 설명해 주세요.</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function vPeople(){
+  return head('멤버·프로젝트 관리','시범 운영에 참여하는 사람과 프로젝트를 등록합니다.')+`
+  <div class="grid g2">
+    <div class="card"><b>사람 추가</b>
+      <div class="fld"><label>이름</label><input id="pName"></div>
+      <div class="grid g2" style="gap:10px"><div class="fld"><label>역할</label><select id="pRole"><option value="member">멤버</option><option value="mentor|운영진">멘토 · 운영진</option><option value="mentor|OB">멘토 · OB</option><option value="admin|운영진">운영진 (관리자)</option></select></div>
+      <div class="fld"><label>팀 (멤버만)</label><input id="pTeam" placeholder="예: 2팀"></div></div>
+      <div class="fld"><label>소개 (OB는 직무·연차)</label><input id="pCohort" placeholder="예: 링커스 AX 3기 / 마케팅 7년차"></div>
+      <button class="btn" style="margin-top:12px" data-addperson>추가</button></div>
+    <div class="card"><b>프로젝트 추가</b>
+      <div class="fld"><label>프로젝트 이름</label><input id="jTitle" placeholder="예: 카페 리뷰 불만 분석"></div>
+      <div class="fld"><label>팀 (비우면 모든 멤버)</label><input id="jTeam" placeholder="예: 2팀"></div>
+      <div class="fld"><label>과제 설명</label><input id="jDesc" placeholder="현직자가 낸 실제 업무 문제"></div>
+      <button class="btn" style="margin-top:12px" data-addproj>추가</button></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><b>사람 ${S.users.length}명</b><div class="tbw"><table class="tb"><tr><th>이름</th><th>역할</th><th>팀</th><th>소개</th></tr>
+      ${S.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${ROLE_LABEL[u.role]}${u.tag?' · '+esc(u.tag):''}</td><td>${esc(u.team||'')}</td><td class="xs">${esc(u.cohort||'')}</td></tr>`).join('')}</table></div></div>
+    <div class="card"><b>프로젝트 ${S.projects.length}개</b><div class="tbw"><table class="tb"><tr><th>이름</th><th>팀</th><th>설명</th></tr>
+      ${S.projects.map(p=>`<tr><td>${esc(p.title)}</td><td>${esc(p.team||'전체')}</td><td class="xs">${esc(p.desc||'')}</td></tr>`).join('')}</table></div></div>
+  </div>`;
+}
+
+const SQL=`create table if not exists axproof_records (
+  id text primary key,
+  kind text not null,
+  data jsonb not null,
+  created_at timestamptz not null default now(),  -- 서버 시간
+  updated_at timestamptz
+);
+alter table axproof_records enable row level security;
+create policy "read all"   on axproof_records for select using (true);
+create policy "insert all" on axproof_records for insert with check (true);
+-- 판단 카드(kind='card')는 수정 불가: 원본 잠금
+create policy "update non-card" on axproof_records for update
+  using (kind <> 'card') with check (kind <> 'card');
+-- created_at을 클라이언트가 바꾸지 못하게 고정
+create or replace function axproof_keep_created() returns trigger as $$
+begin new.created_at := old.created_at; return new; end $$ language plpgsql;
+drop trigger if exists axproof_keep_created on axproof_records;
+create trigger axproof_keep_created before update on axproof_records
+  for each row execute function axproof_keep_created();`;
+
+function vData(){
+  return head('데이터·공유 설정',sb?'지금은 공유 DB 모드입니다.':'지금은 로컬 모드입니다. 이 브라우저에만 저장됩니다.')+`
+  <div class="grid g2">
+    <div class="card"><b>로컬 데이터</b><p class="s muted" style="margin:6px 0 12px">백업하거나 다른 기기로 옮길 때 사용합니다.</p>
+      <div class="row">
+        <button class="btn o sm" data-export>JSON 내보내기</button>
+        <label class="btn o sm" style="cursor:pointer">JSON 불러오기<input type="file" accept=".json" data-import hidden ${sb?'disabled':''}></label>
+        <button class="btn o sm" data-csv>판단 카드 CSV</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn g sm" data-demo ${sb?'disabled':''}>예시 데이터로 덮어쓰기</button>
+        <button class="btn d sm" data-reset ${sb?'disabled':''}>전체 초기화</button>
+      </div>
+      ${sb?'<p class="hint">공유 모드에서는 불러오기·초기화를 막아 두었습니다.</p>':''}
+    </div>
+    <div class="card"><b>공유 모드 (Supabase 무료 플랜)</b>
+      <p class="s muted" style="margin-top:6px">멤버와 멘토가 각자 기기에서 같은 데이터를 쓰려면 연결하세요. 기록 시각이 <b>서버 시간</b>으로 찍히고, 판단 카드는 DB 차원에서 수정이 막힙니다.</p>
+      <ol class="s" style="padding-left:18px;margin:10px 0">
+        <li>supabase.com에서 무료 프로젝트 생성</li>
+        <li>SQL Editor에 아래 SQL을 붙여넣고 실행</li>
+        <li>Project Settings → API에서 URL과 anon key를 복사해 아래에 입력</li>
+        <li>배포했다면 config.js에 URL·key를 적어두면 모든 멤버가 자동 연결 (아니면 각자 이 화면에서 입력)</li>
+      </ol>
+      <div class="fld"><label>Project URL</label><input id="sbUrl" value="${esc(cfg.url)}" placeholder="https://xxxx.supabase.co"></div>
+      <div class="fld"><label>anon public key</label><input id="sbKey" value="${esc(cfg.key)}" placeholder="eyJ..."></div>
+      <div class="row" style="margin-top:12px">${sb?'<button class="btn g sm" data-local>로컬 모드로 돌아가기</button>':'<button class="btn sm" data-connect>연결 테스트 후 전환</button>'}<button class="btn g sm" data-copysql>SQL 복사</button></div>
+      <p class="hint">⚠️ 시범 운영용 간이 구조입니다. anon key로 누구나 읽고 쓸 수 있으므로 실명, 연락처, 회사 기밀은 넣지 마세요. 정식 운영 전에는 로그인과 권한 분리가 필요합니다.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px"><b>AI 연결 (Claude API)</b>
+    <p class="s muted" style="margin-top:6px">키를 넣으면 멤버의 <b>AI 작업 공간</b>에서 Claude와 바로 작업하고, <b>AI 사수</b>가 대화에서 판단 후보 찾기 · 카드 점검 · 결과/배운 점 초안 · 과정 요약 초안으로 Decision Log 정리를 돕습니다. 키가 없으면 작업 공간은 '다른 AI 대화 기록' 모드로, AI 사수는 규칙 기반 기본 모드로 동작합니다.</p>
+    <div class="grid g2" style="gap:10px">
+      <div class="fld"><label>Claude API 키</label><input id="aiKeyIn" type="password" value="${aiKey()?'••••••••••••':''}" placeholder="sk-ant-..."></div>
+      <div class="fld"><label>모델</label><input value="${MODEL} · effort low" disabled></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn sm" data-aisave>저장하고 연결 테스트</button>${aiKey()?'<button class="btn d sm" data-aiclear>키 삭제</button>':''}<span class="chip ${aiKey()?'ok':'no'}">${aiKey()?'키 저장됨':'키 없음'}</span></div>
+    <p class="hint">⚠️ 키는 이 브라우저에만 저장되고 공유 DB로는 올라가지 않습니다. 다만 브라우저에서 직접 호출하는 방식이라 이 기기를 쓰는 사람은 키를 볼 수 있습니다. 시범 운영 전용 키를 따로 만들고 Claude Console에서 월 사용 한도를 걸어두세요. 정식 서비스에서는 서버를 거쳐 호출합니다.</p>
+  </div>
+  <div class="card" style="margin-top:14px"><b>SQL</b><pre class="sql" style="margin-top:8px">${esc(SQL)}</pre></div>`;
+}
+
+function head(t,p){return `<div class="head"><div><h1>${t}</h1>${p?`<p>${p}</p>`:''}</div></div>`}
+
+/* ---------- render ---------- */
+function render(){
+  timers.forEach(clearInterval); timers=[];
+  const u=me();
+  if(u&&!NAV[u.role].some(([k])=>k===view)) view=NAV[u.role][0][0];
+  renderSide();
+  const m=document.getElementById('main');
+  if(!S.users.length||!u){ m.innerHTML=S.users.length?'<div class="card empty">왼쪽에서 사용자를 선택하세요.</div>':vOnboard(); return; }
+  const V={work:vWork,inbox:vInbox,mine:vMine,dl:vDL,profile:vProfile,review:vReview,questions:vQuestions,dash:vDash,people:vPeople,data:vData};
+  m.innerHTML=V[view](u);
+  document.querySelectorAll('[data-since]').forEach(el=>{
+    const t0=new Date(el.dataset.since).getTime();
+    const f=()=>el.textContent=Math.max(0,Math.round((Date.now()-t0)/1000))+'초'; f(); timers.push(setInterval(f,1000));
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='meSel'){localStorage.setItem(ME_KEY,t.value);ui.draft=null;ui.helper=null;ui.noteOpen=null;ui.sumDraft=null;ui.chatDraft='';view='';render();return}
+  if(t.dataset.dlproj!==undefined){ui.dlProj=t.value;render();return}
+  if(t.dataset.mineproj!==undefined){ui.mineProj=t.value;ui.sumDraft=null;render();return}
+  if(t.dataset.team!==undefined){ui.team=t.value;render();return}
+  if(t.dataset.profsel!==undefined){ui.profileUser=t.value;render();return}
+  if(t.dataset.import!==undefined&&t.files[0]){
+    const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);S=Object.assign(emptyState(),d);store.persist();toast('불러왔습니다');render()}catch(err){toast('JSON 형식이 올바르지 않습니다')}};r.readAsText(t.files[0]);return}
+  if(t.dataset.d&&ui.draft){ui.draft[t.dataset.d]=t.value}
+  if(t.dataset.ev!==undefined&&ui.draft){ui.draft.evidence[+t.dataset.ev][t.dataset.k]=t.value}
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='chatIn'&&e.key==='Enter'&&(e.ctrlKey||e.metaKey)){const b=document.querySelector('[data-chatsend]');if(b&&!b.disabled)b.click()}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='chatIn') ui.chatDraft=t.value;
+  if(t.dataset.d&&ui.draft) ui.draft[t.dataset.d]=t.value;
+  if(t.dataset.ev!==undefined&&ui.draft) ui.draft.evidence[+t.dataset.ev][t.dataset.k]=t.value;
+});
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-pick] .pill,[data-filter] .pill,[data-evadd],[data-evdel],[data-savecard],[data-correct],[data-cancelcorr],[data-openq],[data-answer],[data-open],[data-close],[data-sug],[data-sendq],[data-verify],[data-savelevel],[data-ack],[data-prof],[data-addperson],[data-addproj],[data-export],[data-csv],[data-demo],[data-reset],[data-start],[data-connect],[data-local],[data-copysql],[data-sync],[data-chatsend],[data-chatpaste],[data-detect],[data-aisave],[data-aiclear],[data-aicand],[data-candfill],[data-aicheck],[data-applyreason],[data-noteopen],[data-notedraft],[data-notesave],[data-aisum],[data-sumsave],[data-dlprint]');
+  if(!t) return;
+  const d=t.dataset, u=me();
+  if(d.go){go(d.go);return}
+  const pick=t.parentElement&&t.parentElement.dataset.pick;
+  if(pick){ui.draft[pick]=d.v;t.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.toggle('on',p===t));return}
+  if(t.parentElement&&t.parentElement.dataset.filter!==undefined){ui.filter=d.v;ui.open=null;render();return}
+  if(d.evadd!==undefined){ui.draft.evidence.push({kind:'자료·논문',label:'',url:''});render();return}
+  if(d.evdel!==undefined){ui.draft.evidence.splice(+d.evdel,1);render();return}
+  if(d.cancelcorr!==undefined){ui.draft.correctsId=null;render();return}
+  if(d.correct){const c=S.cards.find(x=>x.id===d.correct);ui.draft={projectId:c.projectId,type:c.type,choice:c.choice,reason:c.reason,prediction:c.prediction||'',occurred:localInput(new Date()),evidence:(c.evidence||[]).map(x=>Object.assign({},x)),correctsId:c.id,origin:c.origin||'작업 중'};go('work');return}
+  if(d.savecard!==undefined){
+    const r=ui.draft;
+    if(!r.reason.trim()){toast('한 줄 이유를 적어주세요');return}
+    // 직전 카드 이후 이 프로젝트에서 나눈 AI 대화를 자동 연결
+    const prev=S.cards.filter(c=>c.userId===u.id&&c.projectId===r.projectId).sort(byTime).pop();
+    const chatRefs=S.chats.filter(m=>m.userId===u.id&&m.projectId===r.projectId&&(!prev||new Date(m.createdAt)>new Date(prev.createdAt))).sort(byTime).slice(-6).map(m=>m.id);
+    const card={userId:u.id,projectId:r.projectId,type:r.type,choice:r.choice,reason:r.reason.trim(),prediction:r.prediction.trim(),
+      evidence:r.evidence.filter(x=>x.label.trim()||x.url.trim()),occurredAt:new Date(r.occurred).toISOString(),correctsId:r.correctsId||null,chatRefs,origin:r.origin||'작업 중'};
+    act(async()=>{await store.add('card',card);ui.draft=null;ui.helper=null},'저장했습니다. 원본은 잠겼습니다.');return}
+  if(d.aicand!==undefined){ui.helper={busy:true};render();findCandidates(u.id,ui.draft.projectId).then(r=>{ui.helper={cands:r.list};render()});return}
+  if(d.candfill!==undefined){
+    const c=ui.helper.cands[+d.candfill];
+    Object.assign(ui.draft,{type:TYPES.includes(c.type)?c.type:ui.draft.type,choice:CHOICES.includes(c.choice)?c.choice:ui.draft.choice,reason:c.reason});
+    if(c.evidence&&!ui.draft.evidence.some(e=>e.label===c.evidence)) ui.draft.evidence=[{kind:'AI 대화',label:c.evidence,url:''}].concat(ui.draft.evidence.filter(e=>e.label||e.url));
+    render();toast('카드에 채웠어요. 내 말로 다듬고 저장하세요');return}
+  if(d.aicheck!==undefined){const dr=ui.draft;ui.helper={busy:true};render();checkDraft(dr).then(r=>{ui.helper={check:r};render()});return}
+  if(d.applyreason!==undefined){ui.draft.reason=ui.helper.check.suggest;render();return}
+  if(d.noteopen){ui.noteOpen=ui.noteOpen===d.noteopen?null:d.noteopen;ui.noteDraft=null;render();return}
+  if(d.notedraft){const c=S.cards.find(x=>x.id===d.notedraft);ui.noteBusy=true;render();draftNote(c).then(r=>{ui.noteBusy=false;ui.noteDraft={cardId:c.id,result:r.result,lesson:r.lesson,ai:r.src==='claude'};render()});return}
+  if(d.notesave){
+    const rs=document.getElementById('nRes').value.trim(),ls=document.getElementById('nLes').value.trim();
+    if(!rs&&!ls){toast('결과나 배운 점을 적어주세요');return}
+    const ai=!!(ui.noteDraft&&ui.noteDraft.cardId===d.notesave&&ui.noteDraft.ai);
+    act(async()=>{await store.add('note',{cardId:d.notesave,userId:u.id,result:rs,lesson:ls,aiAssisted:ai});ui.noteOpen=null;ui.noteDraft=null},'결과·배운 점을 저장했습니다');return}
+  if(d.aisum!==undefined){ui.sumBusy=true;render();draftSummary(u.id,ui.mineProjCur).then(r=>{ui.sumBusy=false;ui.sumDraft={text:r.text,ai:r.src==='claude'};render()});return}
+  if(d.sumsave!==undefined){
+    const t=document.getElementById('sumText').value.trim();if(!t){toast('요약을 적어주세요');return}
+    act(async()=>{await store.add('summary',{userId:u.id,projectId:ui.mineProjCur,text:t,aiAssisted:!!(ui.sumDraft&&ui.sumDraft.ai)});ui.sumDraft=null},'과정 요약을 저장했습니다');return}
+  if(d.dlprint!==undefined){window.print();return}
+  if(d.chatsend!==undefined||d.chatpaste!==undefined){
+    const ta=document.getElementById('chatIn'), tx=ta.value.trim(); if(!tx){toast('메시지를 적어주세요');return}
+    const base={userId:u.id,projectId:ui.draft.projectId};
+    if(d.chatpaste!==undefined){act(async()=>{await store.add('chat',Object.assign({role:'paste',text:tx},base));ui.chatDraft=''},'대화를 기록했습니다');return}
+    act(async()=>{
+      await store.add('chat',Object.assign({role:'user',text:tx},base));ui.chatDraft='';ui.thinking=true;render();
+      try{const reply=await askClaude(chatSystem(projById(base.projectId)),chatHistory(u.id,base.projectId));
+        await store.add('chat',Object.assign({role:'assistant',text:reply||'(빈 응답)'},base));}
+      catch(err){toast('AI 오류: '+aiErr(err))}
+      finally{ui.thinking=false}
+    });return}
+  if(d.detect){
+    const m=S.chats.find(x=>x.id===d.detect), tx=m.text;
+    Object.assign(ui.draft,{type:/(왜|빠졌|빠진|누락|틀렸|틀린|출처|근거|확인해|이상해)/.test(tx)?'AI 검증':/(대신|바꿔|바꾸)/.test(tx)?'방향 전환':'대안 선택',choice:'일부 수정',
+      reason:tx.replace(/\s+/g,' ').slice(0,80),occurred:localInput(new Date(m.createdAt))});
+    if(!ui.draft.evidence.some(e=>e.kind==='AI 대화'&&e.label)) ui.draft.evidence=[{kind:'AI 대화',label:'작업 공간 대화 '+fmt(m.createdAt),url:''}].concat(ui.draft.evidence.filter(e=>e.label||e.url));
+    render();toast('판단 카드에 채웠어요. 이유를 내 말로 다듬고 저장하세요');return}
+  if(d.aisave!==undefined){
+    const v=document.getElementById('aiKeyIn').value.trim();
+    if(v&&!v.startsWith('•')) localStorage.setItem(AIKEY_KEY,v);
+    if(!aiKey()){toast('키를 입력하세요');return}
+    toast('연결 테스트 중…');
+    askClaude('짧게 답한다.',[{role:'user',content:'연결 확인입니다. "연결됨"이라고만 답하세요.'}]).then(()=>{toast('Claude 연결 성공');render()}).catch(err=>{toast('연결 실패: '+aiErr(err));render()});return}
+  if(d.aiclear!==undefined){localStorage.removeItem(AIKEY_KEY);aiClient=null;toast('키를 삭제했습니다');render();return}
+  if(d.openq){const q=S.questions.find(x=>x.id===d.openq);q.openedAt=new Date().toISOString();act(()=>store.update('question',q));return}
+  if(d.answer){
+    const q=S.questions.find(x=>x.id===d.answer), v=document.getElementById('ans-'+q.id).value.trim();
+    if(!v){toast('답변을 적어주세요');return}
+    q.answer=v;q.answeredAt=new Date().toISOString();q.responseSec=Math.round((Date.now()-new Date(q.openedAt))/1000);
+    act(()=>store.update('question',q),'답변을 보냈습니다');return}
+  if(d.open){const [kind,id]=d.open.split(':');ui.open=ui.open&&ui.open.id===id&&ui.open.kind===kind?null:{kind,id};render();return}
+  if(d.close!==undefined){ui.open=null;render();return}
+  if(d.sug){const ta=document.getElementById('qtext');ta.value=d.sug;ta.focus();return}
+  if(d.sendq){const txt=document.getElementById('qtext').value.trim();if(!txt){toast('질문을 적어주세요');return}
+    act(async()=>{await store.add('question',{cardId:d.sendq,mentorId:u.id,text:txt});ui.open=null},'질문을 보냈습니다');return}
+  if(d.verify){
+    const contributors={};document.querySelectorAll('[data-contrib]').forEach(s=>contributors[s.dataset.contrib]=s.value);
+    const v={cardId:d.verify,mentorId:u.id,evidence:document.getElementById('vEv').value,contribution:document.getElementById('vCo').value,result:document.getElementById('vRe').value,contributors,comment:document.getElementById('vCm').value.trim()};
+    act(async()=>{await store.add('verif',v);ui.open=null},'확인을 저장했습니다');return}
+  if(d.savelevel){
+    const sel=[...document.querySelectorAll('[data-axis]')].filter(s=>s.value!=='');
+    if(!sel.length){toast('평가할 항목을 고르세요');return}
+    act(async()=>{for(const s of sel) await store.add('level',{userId:d.savelevel,axis:s.dataset.axis,level:+s.value,by:u.id});ui.open=null},'평가를 저장했습니다');return}
+  if(d.ack){const q=S.questions.find(x=>x.id===d.ack);q.ack=true;act(()=>store.update('question',q),'확인 표시했습니다');return}
+  if(d.prof){ui.profileUser=d.prof;go('profile');return}
+  if(d.addperson!==undefined){
+    const name=document.getElementById('pName').value.trim();if(!name){toast('이름을 적어주세요');return}
+    const [role,tag]=document.getElementById('pRole').value.split('|');
+    act(()=>store.add('user',{name,role,tag:tag||'',team:role==='member'?document.getElementById('pTeam').value.trim():'',cohort:document.getElementById('pCohort').value.trim()}),'추가했습니다');return}
+  if(d.addproj!==undefined){
+    const title=document.getElementById('jTitle').value.trim();if(!title){toast('프로젝트 이름을 적어주세요');return}
+    act(()=>store.add('project',{title,team:document.getElementById('jTeam').value.trim(),desc:document.getElementById('jDesc').value.trim()}),'추가했습니다');return}
+  if(d.export!==undefined){download('axproof-backup.json',JSON.stringify(S,null,2),'application/json');return}
+  if(d.csv!==undefined){
+    const rows=[['기록시각','판단시각','실시간','멤버','팀','프로젝트','유형','처리','이유','예측','근거수','근거','기여','결과','질문수','답변수']];
+    S.cards.slice().sort(byTime).forEach(c=>{const a=userById(c.userId)||{},p=projById(c.projectId)||{},pp=passport(c),qs=qsOf(c.id);
+      rows.push([c.createdAt,c.occurredAt,isRealtime(c)?'Y':'N',a.name,a.team,p.title,c.type,c.choice,c.reason,c.prediction,(c.evidence||[]).length,pp[1][1][0],pp[2][1][0],pp[3][1][0],qs.length,qs.filter(q=>q.answer).length])});
+    download('axproof-cards.csv','﻿'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');return}
+  if(d.demo!==undefined){if(S.users.length&&!confirm('현재 데이터를 예시 데이터로 덮어쓸까요?'))return;seedDemo();toast('예시 데이터를 불러왔습니다');render();return}
+  if(d.reset!==undefined){if(!confirm('모든 데이터를 지울까요? 되돌릴 수 없습니다.'))return;S=emptyState();store.persist();localStorage.removeItem(ME_KEY);render();return}
+  if(d.start!==undefined){const n=document.getElementById('obName').value.trim()||'운영진';
+    act(async()=>{const a=await store.add('user',{name:n,role:'admin',tag:'운영진',team:'',cohort:''});localStorage.setItem(ME_KEY,a.id);view='people'},'운영진 계정을 만들었습니다');return}
+  if(d.copysql!==undefined){navigator.clipboard&&navigator.clipboard.writeText(SQL).then(()=>toast('SQL을 복사했습니다'),()=>toast('복사 실패: 아래 SQL을 직접 선택하세요'));return}
+  if(d.connect!==undefined){
+    const url=document.getElementById('sbUrl').value.trim(),key=document.getElementById('sbKey').value.trim();
+    if(!url||!key){toast('URL과 key를 입력하세요');return}
+    cfg={mode:'supabase',url,key};saveJSON(CFG_KEY,cfg);
+    store.init().then(()=>{if(sb){toast('공유 DB에 연결했습니다');}render()});return}
+  if(d.local!==undefined){cfg.mode='local';saveJSON(CFG_KEY,cfg);sb=null;store.init().then(render);toast('로컬 모드로 돌아왔습니다');return}
+  if(d.sync!==undefined){act(()=>store.pull(),'최신 데이터를 불러왔습니다');return}
+});
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+/* ---------- demo data ---------- */
+function seedDemo(){
+  const D=emptyState(), now=Date.now();
+  const at=(day,h,m)=>{const d=new Date(now-day*864e5);d.setHours(h,m,Math.floor(Math.random()*59),0);return d.toISOString()};
+  const U=(id,name,role,tag,team,cohort)=>D.users.push({id,name,role,tag,team,cohort,createdAt:at(30,10,0)});
+  U('a1','링커스 운영진','admin','운영진','','링커스 운영진');
+  U('m1','한지우','mentor','운영진','','링커스 운영진 · 프로그램 담당');
+  U('m2','오세린','mentor','OB','','OB · 마케팅 7년차');
+  U('m3','강도현','mentor','OB','','OB · 데이터 분석 5년차');
+  U('u1','김민지','member','','2팀','링커스 AX 3기');
+  U('u2','이준호','member','','2팀','링커스 AX 3기');
+  U('u3','최서연','member','','2팀','링커스 AX 3기');
+  U('u4','박도윤','member','','3팀','링커스 AX 3기');
+  U('u5','정하은','member','','3팀','링커스 AX 3기');
+  D.projects.push({id:'p1',title:'카페 리뷰 불만 분석',team:'2팀',desc:'리뷰 100건을 AI로 분류하고 개선 우선순위 3개 제안 (OB 오세린 출제)',createdAt:at(25,10,0)});
+  D.projects.push({id:'p2',title:'동아리 신입 모집 퍼널 개선',team:'3팀',desc:'지원 페이지 이탈 원인 분석과 개선안 (운영진 출제)',createdAt:at(25,10,0)});
+  const C=(id,userId,projectId,type,choice,reason,day,h,m,lateMin,ev,prediction)=>{const c=at(day,h,m);
+    D.cards.push({id,userId,projectId,type,choice,reason,prediction:prediction||'',evidence:ev||[],occurredAt:new Date(new Date(c).getTime()-(lateMin||2)*60000).toISOString(),correctsId:null,createdAt:c})};
+  C('c1','u2','p1','문제 정의','AI 미사용','분석 범위를 재방문 의도가 드러난 리뷰로 좁힘',20,14,10,0,[{kind:'문서 버전',label:'과제 정의서 v2',url:''}]);
+  C('c2','u1','p1','AI 검증','일부 수정','AI 3분류에서 응대 불만 14건이 빠져 4분류로 수정',18,14,21,0,[{kind:'검증 결과',label:'표본 50건 검증 시트',url:''},{kind:'AI 대화',label:'분류 대화 #12',url:''}],'배송 불만이 40% 이상일 확률 70%');
+  C('c3','u2','p1','대안 선택','기각','AI가 추천한 설문 대신 매장 직원 인터뷰 3건으로 원인 확인',15,16,5,0,[{kind:'실무자 조언',label:'직원 인터뷰 메모',url:''},{kind:'현장 사진',label:'매장 응대 동선',url:''}]);
+  C('c4','u3','p1','실행 판단','채택','개선안 초안을 AI 요약 그대로 보고서에 반영',13,22,40,300,[]);
+  C('c5','u1','p1','방향 전환','일부 수정','개선 1순위를 배송에서 응대 교육으로 변경',10,15,30,0,[{kind:'자료·논문',label:'서비스 품질 SERVQUAL 요약',url:''}]);
+  C('c6','u4','p2','문제 정의','일부 수정','AI가 제시한 이탈 원인 5개 중 데이터로 확인 가능한 2개만 남김',12,19,0,0,[{kind:'검증 결과',label:'구글폼 응답 이탈 단계표',url:''}]);
+  C('c7','u5','p2','AI 검증','기각','AI가 만든 경쟁 동아리 지원률 수치의 출처가 없어 제외',9,20,15,0,[{kind:'AI 대화',label:'출처 확인 대화',url:''}]);
+  C('c8','u4','p2','대안 선택','일부 수정','지원서 문항 축소안 A/B 중 B 선택 (필수 문항 7→4)',6,13,45,0,[{kind:'문서 버전',label:'지원서 v3',url:''}]);
+  C('c9','u5','p2','실행 판단','채택','개편한 지원 페이지 1주 운영 후 이탈률 비교하기로 결정',4,18,10,0,[]);
+  C('c10','u1','p1','AI 검증','일부 수정','AI 요약문의 비율 수치를 원자료로 재계산해 2곳 수정',3,11,20,0,[{kind:'검증 결과',label:'재계산 시트',url:''}]);
+  C('c11','u2','p1','실행 판단','채택','최종 보고서 구성을 문제-근거-제안 순으로 확정',2,17,0,240,[]);
+  C('c12','u3','p1','대안 선택','채택','AI가 고른 개선안 3개를 그대로 채택',1,23,10,600,[]);
+  const Q=(id,cardId,mentorId,text,day,h,m,answer,sec,ack,openedLag)=>{const c=at(day,h,m);const q={id,cardId,mentorId,text,createdAt:c};
+    if(answer){q.openedAt=new Date(new Date(c).getTime()+(openedLag||3600)*1000).toISOString();q.answeredAt=new Date(new Date(q.openedAt).getTime()+sec*1000).toISOString();q.answer=answer;q.responseSec=sec;q.ack=!!ack}D.questions.push(q)};
+  Q('q1','c2','m2',"응대 불만을 '기타'로 묶지 않고 따로 뺀 이유는 뭐야?",17,10,0,'기타로 묶으면 14%라서 3위 안에 들어가요. 실제 매장 개선은 응대가 제일 빨리 바꿀 수 있어서 따로 봐야 한다고 판단했어요.',52,true);
+  Q('q2','c3','m3','설문을 버린 대안의 가장 큰 장점은 뭐였어? 그래도 버린 이유는?',14,9,30,'설문은 표본이 많다는 게 장점인데, 2주 안에 50명 이상 모으기 어려웠고 원인보다 만족도만 나올 것 같았어요.',71,false);
+  Q('q3','c7','m1','출처가 없는 수치를 어떻게 알아챘어? 어떤 신호가 있었어?',8,21,0,'숫자가 너무 딱 떨어지고(정확히 32%) 링크를 달라고 하니 AI가 다른 숫자를 말해서 의심했어요.',38,true);
+  Q('q4','c5','m2','방향을 바꾸면서 잃은 것은 뭐야?',2,10,0);
+  Q('q5','c8','m1','시간이 두 배 있었다면 다른 선택을 했을까?',1,15,0);
+  const V=(id,cardId,mentorId,evidence,contribution,result,contributors,comment,day)=>D.verifs.push({id,cardId,mentorId,evidence,contribution,result,contributors,comment,createdAt:at(day,20,0)});
+  V('v1','c2','m2','original','mentor','reviewed',{u1:'lead',u2:'co',u3:'none'},'검증 시트 원본 확인. 표본 기준 명확',16);
+  V('v2','c3','m3','indirect','mentor','reviewed',{u1:'none',u2:'lead',u3:'none'},'인터뷰 메모 확인, 녹취는 없음',13);
+  V('v3','c1','m1','original','mentor','none',{u1:'co',u2:'lead',u3:'none'},'',19);
+  V('v4','c7','m1','original','demo','reviewed',{u4:'co',u5:'lead'},'면담에서 출처 확인 과정을 재현함',7);
+  V('v5','c6','m1','original','mentor','measured',{u4:'lead',u5:'co'},'',11);
+  V('v6','c4','m2','none','self','none',{u1:'none',u2:'none',u3:'lead'},'AI 요약을 그대로 사용, 검증 근거 없음',12);
+  const CH=(id,role,text,m)=>{const t=at(18,14,0);D.chats.push({id,userId:'u1',projectId:'p1',role,text,createdAt:new Date(new Date(t).getTime()+m*60000).toISOString()})};
+  CH('ch1','user','리뷰 100건을 불만 유형으로 분류해줘',5);
+  CH('ch2','assistant','3가지로 분류했습니다: 배송 지연(41), 가격(27), 품질(32). 분류 기준은 리뷰에 등장한 핵심 단어입니다.',6);
+  CH('ch3','user',"표본 50건을 직접 봤는데 '직원 응대' 불만이 14건 있어. 왜 빠졌어?",17);
+  CH('ch4','assistant','맞습니다. 응대 관련 리뷰를 품질에 포함했습니다. 응대를 분리해 4가지로 다시 나누겠습니다.',18);
+  D.cards.find(c=>c.id==='c2').chatRefs=['ch1','ch2','ch3','ch4'];
+  D.cards.find(c=>c.id==='c5').origin='공유시간';
+  D.cards.find(c=>c.id==='c8').origin='공유시간';
+  const N=(cardId,userId,result,lesson,day,ai)=>D.notes.push({id:uid(),cardId,userId,result,lesson,aiAssisted:!!ai,createdAt:at(day,22,0)});
+  N('c2','u1','응대 불만을 분리하자 개선 우선순위가 바뀌었고, 최종 보고서 1순위의 근거가 됐다.','AI 분류를 받기 전에 표본을 먼저 직접 읽어 기준을 세우는 게 빠르다.',17,true);
+  N('c5','u1','개선 1순위를 응대 교육으로 바꿔 매장 직원 인터뷰 결과와 맞췄다.','공유시간에 받은 "우선순위 근거가 뭐냐"는 질문이 숫자만 보던 나를 돌아보게 했다. 바로 바꿀 수 있는 것부터 본다.',9,false);
+  N('c6','u4','확인 가능한 원인 2개로 좁히자 개선안이 구체적으로 나왔다.','AI가 원인을 많이 줄수록 데이터로 확인되는 것만 남기는 기준이 먼저 필요하다.',11,true);
+  D.summaries.push({id:'s1',userId:'u1',projectId:'p1',aiAssisted:true,createdAt:at(2,21,0),text:'처음 문제: 리뷰 100건에서 불만 유형을 찾아 개선 우선순위를 정하는 일.\n주요 판단: AI 3분류에서 응대 불만 누락을 발견해 4분류로 고쳤고, 공유시간 질문 뒤 개선 1순위를 응대 교육으로 바꿨다.\n근거: 표본 50건 검증 시트, 재계산 시트, 매장 직원 인터뷰.\n바뀐 점: 숫자가 큰 불만보다 매장이 바로 바꿀 수 있는 불만을 먼저 봤다.\n다음에는: AI에 맡기기 전에 확인 기준부터 정하겠다.'});
+  const L=(userId,axis,level,day)=>D.levels.push({id:uid(),userId,axis,level,by:'m2',createdAt:at(day,21,0)});
+  [['u1',[3,4,2,3,0]],['u2',[4,3,3,2,0]],['u3',[2,1,1,2,0]],['u4',[3,3,3,2,0]],['u5',[2,4,2,3,0]]].forEach(([u,ls])=>ls.forEach((l,i)=>L(u,AXES[i],l,5)));
+  S=D; store.persist(); localStorage.setItem(ME_KEY,'u1'); view='work'; ui.draft=null;
+}
+
+/* ---------- boot ---------- */
+view=(location.hash||'').slice(1);
+// config.js에 공유 DB가 지정돼 있고, 이 브라우저에서 직접 설정을 바꾼 적이 없으면 그 DB로 자동 연결
+(()=>{const P=window.AXPROOF_CONFIG||{};let untouched=false;try{untouched=localStorage.getItem(CFG_KEY)===null}catch(e){}
+  if(P.supabaseUrl&&P.supabaseAnonKey&&untouched) cfg={mode:'supabase',url:P.supabaseUrl,key:P.supabaseAnonKey};})();
+store.init().then(render);
+if(cfg.mode==='supabase') setInterval(()=>{if(sb&&!ui.open&&!document.querySelector('textarea:focus,input:focus'))store.pull().then(render).catch(()=>{})},30000);
+</script>
+</body>
+</html>
