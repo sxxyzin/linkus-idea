@@ -210,8 +210,14 @@ let view='', ui={open:null, filter:'pending', team:'', profileUser:'', draft:nul
 let timers=[];
 
 function emptyState(){return {users:[],projects:[],cards:[],questions:[],verifs:[],levels:[],chats:[],notes:[],summaries:[]}}
-function loadJSON(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
-function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+// 시크릿 창·저장소 차단 환경에서도 화면이 멈추지 않도록 모든 접근을 감싼다
+// 저장소를 못 쓰면 창을 닫기 전까지 메모리에 보관
+const _mem={};
+const LS={get(k){try{return window.localStorage.getItem(k)}catch(e){return k in _mem?_mem[k]:null}},
+  set(k,v){_mem[k]=String(v);try{window.localStorage.setItem(k,v)}catch(e){}},
+  del(k){delete _mem[k];try{window.localStorage.removeItem(k)}catch(e){}}};
+function loadJSON(k,d){try{const v=LS.get(k);return v?JSON.parse(v):d}catch(e){return d}}
+function saveJSON(k,v){try{LS.set(k,JSON.stringify(v))}catch(e){}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -225,7 +231,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // 키는 이 브라우저에만 저장되고 공유 DB로 올라가지 않습니다.
 const MODEL='claude-opus-5-5', SDK_URL='https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.133.0/+esm', AIKEY_KEY='axproof.pilot.aikey';
 let Anthropic=null, aiClient=null, aiClientKey='';
-const aiKey=()=>{try{return localStorage.getItem(AIKEY_KEY)||''}catch(e){return ''}};
+const aiKey=()=>{try{return LS.get(AIKEY_KEY)||''}catch(e){return ''}};
 async function getClient(){
   if(!aiKey()) throw new Error('Claude API 키가 없습니다');
   if(!Anthropic) Anthropic=(await import(SDK_URL)).default;
@@ -256,6 +262,17 @@ const SASU_SYSTEM=`너는 링커스 멤버의 Decision Log 정리를 돕는 'AI 
 const CAND_SCHEMA={type:'object',additionalProperties:false,required:['candidates'],properties:{candidates:{type:'array',items:{type:'object',additionalProperties:false,required:['type','choice','reason','evidence'],properties:{type:{type:'string',enum:TYPES},choice:{type:'string',enum:CHOICES},reason:{type:'string'},evidence:{type:'string'}}}}}};
 const CHECK_SCHEMA={type:'object',additionalProperties:false,required:['feedback','reason_suggestion'],properties:{feedback:{type:'array',items:{type:'string'}},reason_suggestion:{type:'string'}}};
 const NOTE_SCHEMA={type:'object',additionalProperties:false,required:['result','lesson'],properties:{result:{type:'string'},lesson:{type:'string'}}};
+// 저장 직후 즉석 질문: 미리 써둘 수 없도록 그 자리에서 자기 말로 답하게 한다
+const QUESTION_SYSTEM=`너는 주니어의 실무 판단력을 키워주는 회사 '사수'다. 방금 저장된 판단 기록을 보고, 그 사람이 그 자리에서 자기 말로만 답할 수 있는 질문을 딱 하나 만든다.
+조건: 한국어 반말, 한 문장, 60자 이내. 판단의 근거, 버린 대안, 조건이 바뀌었을 때 중 하나를 겨냥한다. 정답을 암시하지 않는다. 질문 문장만 출력한다.`;
+function questionPrompt(c){
+  const p=projById(c.projectId), chats=(c.chatRefs||[]).map(id=>S.chats.find(m=>m.id===id)).filter(Boolean);
+  return [`프로젝트: ${p?p.title:''}`,`판단 유형: ${c.type}`,`AI 제안 처리: ${c.choice}`,`한 줄 이유: ${c.reason}`,
+    c.prediction?`AI를 보기 전 예측: ${c.prediction}`:'',
+    (c.evidence||[]).length?`근거: ${c.evidence.map(e=>e.kind+' '+e.label).join(', ')}`:'근거: 없음',
+    chats.length?`직전 AI 대화:\n${chatText(chats)}`:''].filter(Boolean).join('\n');
+}
+const pickQuestion=type=>{const b=[...(QUESTION_BANK[type]||[]),...COMMON_Q];return b[Math.floor(Math.random()*b.length)]};
 function chatHistory(uidv,pid){
   const msgs=S.chats.filter(m=>m.userId===uidv&&m.projectId===pid&&m.role!=='paste').sort(byTime).slice(-20);
   const out=[];
@@ -369,7 +386,7 @@ async function act(fn,okMsg){try{await fn(); if(okMsg) toast(okMsg); render();}c
 /* ---------- lookups ---------- */
 const userById=id=>S.users.find(u=>u.id===id);
 const projById=id=>S.projects.find(p=>p.id===id);
-function me(){return userById(localStorage.getItem(ME_KEY))||null}
+function me(){return userById(LS.get(ME_KEY))||null}
 const members=()=>S.users.filter(u=>u.role==='member');
 const teams=()=>[...new Set(members().map(u=>u.team).filter(Boolean))].sort();
 const cardsOf=uidv=>S.cards.filter(c=>c.userId===uidv).sort(byTime);
@@ -476,11 +493,19 @@ function vWork(u){
       ${h.cands?(h.cands.length?h.cands.map((c,i)=>`<div class="cand"><span class="chip ok">${esc(c.type)}</span> <span class="chip no">${esc(c.choice)}</span> ${esc(c.reason)}${c.evidence?`<div class="xs muted">근거 후보: ${esc(c.evidence)}</div>`:''}<div><button class="btn g sm" style="margin-top:6px" data-candfill="${i}">카드에 채우기</button></div></div>`).join(''):'<div class="hint">직전 카드 이후 대화에서 판단 후보를 찾지 못했습니다.</div>'):''}
       ${h.check?`<div class="panel green">${h.check.feedback.length?`<ul style="padding-left:18px;font-size:14px">${h.check.feedback.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:'<div class="s">빠진 곳이 없습니다.</div>'}${h.check.suggest?`<div class="s" style="margin-top:8px"><b>이유 다듬기 제안</b><br>${esc(h.check.suggest)}</div><button class="btn sm" style="margin-top:8px" data-applyreason>제안을 이유 칸에 넣기</button>`:''}</div>`:''}
     </div>`;
-  return head('판단 기록하기','AI와 작업하다 중요한 판단이 생기면 15초만 쓰세요. 저장하면 시각이 찍히고 수정할 수 없습니다. 이 기록이 그대로 Decision Log 제출본이 됩니다.')+`
+  const sq=ui.sasu&&ui.sasu.qid?S.questions.find(q=>q.id===ui.sasu.qid):null;
+  const sasuHTML=ui.sasu?`<div class="sasu">
+      <div class="who">AI 사수의 질문${sq?` · ${sq.source==='claude'?'Claude가 방금 만든 질문':'기본 질문 (AI 미연결)'}`:''}</div>
+      ${ui.sasu.loading?'<div class="qq">방금 저장한 판단을 보고 질문을 고르는 중…</div>':sq?(sq.answer?`<div class="qq">${esc(sq.text)}</div><div class="s" style="color:var(--on-dark-soft)">답변 완료 · 응답 ${sq.responseSec}초. DL 제출본 "배운 점" 칸과 멘토 검토 화면에 함께 표시됩니다.</div><button class="btn sm" style="margin-top:10px;background:#fff;color:var(--accent);border-color:#fff" data-sasuclose>닫기</button>`
+        :`<div class="qq">${esc(sq.text)}</div><div class="s" style="color:var(--on-dark-soft)">응답 시간 <span class="timer" style="color:var(--light)" data-since="${sq.openedAt}">0초</span> · 미리 써둘 수 없도록 즉석에서 자기 말로 답하세요</div>
+        <textarea id="ans-${sq.id}" placeholder="생각나는 대로 답해주세요"></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn sm" style="background:#fff;color:var(--accent);border-color:#fff" data-answer="${sq.id}">답변 보내기</button><button class="btn sm" style="background:transparent;border-color:rgba(255,255,255,.5)" data-sasuclose>나중에 답하기</button></div>`):''}
+    </div>`:'';
+  return head('판단 기록하기','AI와 작업하다 중요한 판단이 생기면 15초만 쓰세요. 저장하면 시각이 찍히고 수정할 수 없으며, AI 사수가 바로 질문합니다. 이 기록이 그대로 Decision Log 제출본이 됩니다.')+`
   <div class="split">
     ${chatHTML}
     <div>
-    ${helperHTML}
+    ${sasuHTML}${helperHTML}
     <div class="card">
       ${corr?`<div class="panel" style="margin:0 0 10px">정정 기록입니다. 원본(${fmt(corr.createdAt)} "${esc(corr.reason)}")은 그대로 남고, 이 기록이 새로 추가됩니다. <a data-cancelcorr style="cursor:pointer">취소</a></div>`:''}
       <div class="fld"><label>프로젝트</label><select data-d="projectId">${projs.map(p=>`<option value="${p.id}" ${d.projectId===p.id?'selected':''}>${esc(p.title)}</option>`).join('')}</select></div>
@@ -589,6 +614,7 @@ function vMine(u){
       <div class="lvl" style="grid-template-columns:1fr auto"><span>근거가 없는 카드</span><span class="chip ${noEv.length?'mid':'ok'}">${noEv.length}건</span></div>
       <div class="lvl" style="grid-template-columns:1fr auto"><span>결과·배운 점이 빈 카드</span><span class="chip ${noNote.length?'mid':'ok'}">${noNote.length}건</span></div>
       <div class="lvl" style="grid-template-columns:1fr auto"><span>사후 입력으로 표시된 카드</span><span class="chip ${late.length?'mid':'ok'}">${late.length}건</span></div>
+      <div class="lvl" style="grid-template-columns:1fr auto"><span>답하지 않은 질문</span>${(()=>{const n=S.questions.filter(q=>!q.answer&&cs.some(c=>c.id===q.cardId)).length;return `<span class="chip ${n?'mid':'ok'}">${n}건</span>`})()}</div>
       <div class="lvl" style="grid-template-columns:1fr auto"><span>과정 요약</span><span class="chip ${sm?'ok':'mid'}">${sm?'작성됨':'미작성'}</span></div>
       <p class="hint">빈 칸이 있어도 제출본은 만들어지며, 빈 칸은 "미작성"으로 표시됩니다.</p>
     </div>
@@ -636,7 +662,7 @@ function vDL(u){
           <tr><th>이유</th><td>${esc(c.reason)}${c.prediction?`<div class="dlnote">AI를 보기 전 예측: ${esc(c.prediction)}</div>`:''}</td></tr>
           <tr><th>AI 활용</th><td>${chats.length?`연결된 AI 대화 ${chats.length}개${mine.map(m=>`<div class="dlq">“${esc(m.text.slice(0,140))}”</div>`).join('')}`:c.choice==='AI 미사용'?'AI 미사용':'연결된 대화 없음'}</td></tr>
           <tr><th>결과</th><td>${n&&n.result?esc(n.result):miss}${(c.evidence||[]).length?`<div class="dlnote">근거: ${c.evidence.map(e=>esc(e.kind)+' · '+(e.url?`<a href="${esc(e.url)}">${esc(e.label||'링크')}</a>`:esc(e.label))).join(' / ')}</div>`:'<div class="dlnote">근거: 없음</div>'}</td></tr>
-          <tr><th>배운 점</th><td>${n&&n.lesson?esc(n.lesson):miss}${n?`<div class="dlnote">${fmt(n.createdAt)} 추가${n.aiAssisted?' · AI 사수 초안 기반':''}</div>`:''}${qs.map(q=>`<div class="dlq">Q. ${esc(q.text)} → ${esc(q.answer)}</div>`).join('')}</td></tr>
+          <tr><th>배운 점</th><td>${n&&n.lesson?esc(n.lesson):miss}${n?`<div class="dlnote">${fmt(n.createdAt)} 추가${n.aiAssisted?' · AI 사수 초안 기반':''}</div>`:''}${qs.map(q=>`<div class="dlq"><b>${esc(mentorName(q).name)}</b> Q. ${esc(q.text)}<br>→ ${esc(q.answer)} <span class="dlnote">(응답 ${q.responseSec}초)</span></div>`).join('')}</td></tr>
         </table>
         <div class="dlpp">${passportHTML(c)}${v&&v.comment?` <span class="dlnote">멘토: ${esc(v.comment)}</span>`:''}</div>
       </section>`}).join('')}
@@ -859,7 +885,7 @@ function vData(){
     </div>
   </div>
   <div class="card" style="margin-top:14px"><b>AI 연결 (Claude API)</b>
-    <p class="s muted" style="margin-top:6px">키를 넣으면 멤버의 <b>AI 작업 공간</b>에서 Claude와 바로 작업하고, <b>AI 사수</b>가 대화에서 판단 후보 찾기 · 카드 점검 · 결과/배운 점 초안 · 과정 요약 초안으로 Decision Log 정리를 돕습니다. 키가 없으면 작업 공간은 '다른 AI 대화 기록' 모드로, AI 사수는 규칙 기반 기본 모드로 동작합니다.</p>
+    <p class="s muted" style="margin-top:6px">키를 넣으면 멤버의 <b>AI 작업 공간</b>에서 Claude와 바로 작업하고, <b>AI 사수</b>가 카드를 저장하는 즉시 그 판단에 맞춘 질문을 던지고, 대화에서 판단 후보 찾기 · 카드 점검 · 결과/배운 점 초안 · 과정 요약 초안으로 Decision Log 정리를 돕습니다. 키가 없으면 작업 공간은 '다른 AI 대화 기록' 모드로, AI 사수는 규칙 기반 기본 모드로 동작합니다.</p>
     <div class="grid g2" style="gap:10px">
       <div class="fld"><label>Claude API 키</label><input id="aiKeyIn" type="password" value="${aiKey()?'••••••••••••':''}" placeholder="sk-ant-..."></div>
       <div class="fld"><label>모델</label><input value="${MODEL} · effort low" disabled></div>
@@ -891,7 +917,7 @@ function render(){
 /* ---------- events ---------- */
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.id==='meSel'){localStorage.setItem(ME_KEY,t.value);ui.draft=null;ui.helper=null;ui.noteOpen=null;ui.sumDraft=null;ui.chatDraft='';view='';render();return}
+  if(t.id==='meSel'){LS.set(ME_KEY,t.value);ui.draft=null;ui.helper=null;ui.sasu=null;ui.noteOpen=null;ui.sumDraft=null;ui.chatDraft='';view='';render();return}
   if(t.dataset.dlproj!==undefined){ui.dlProj=t.value;render();return}
   if(t.dataset.mineproj!==undefined){ui.mineProj=t.value;ui.sumDraft=null;render();return}
   if(t.dataset.team!==undefined){ui.team=t.value;render();return}
@@ -911,7 +937,7 @@ document.addEventListener('input',e=>{
   if(t.dataset.ev!==undefined&&ui.draft) ui.draft.evidence[+t.dataset.ev][t.dataset.k]=t.value;
 });
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-go],[data-pick] .pill,[data-filter] .pill,[data-evadd],[data-evdel],[data-savecard],[data-correct],[data-cancelcorr],[data-openq],[data-answer],[data-open],[data-close],[data-sug],[data-sendq],[data-verify],[data-savelevel],[data-ack],[data-prof],[data-addperson],[data-addproj],[data-export],[data-csv],[data-demo],[data-reset],[data-start],[data-connect],[data-local],[data-copysql],[data-sync],[data-chatsend],[data-chatpaste],[data-detect],[data-aisave],[data-aiclear],[data-aicand],[data-candfill],[data-aicheck],[data-applyreason],[data-noteopen],[data-notedraft],[data-notesave],[data-aisum],[data-sumsave],[data-dlprint]');
+  const t=e.target.closest('[data-go],[data-pick] .pill,[data-filter] .pill,[data-evadd],[data-evdel],[data-savecard],[data-correct],[data-cancelcorr],[data-openq],[data-answer],[data-open],[data-close],[data-sug],[data-sendq],[data-verify],[data-savelevel],[data-ack],[data-prof],[data-addperson],[data-addproj],[data-export],[data-csv],[data-demo],[data-reset],[data-start],[data-connect],[data-local],[data-copysql],[data-sync],[data-chatsend],[data-chatpaste],[data-detect],[data-aisave],[data-aiclear],[data-aicand],[data-candfill],[data-aicheck],[data-applyreason],[data-noteopen],[data-notedraft],[data-notesave],[data-aisum],[data-sumsave],[data-dlprint],[data-sasuclose]');
   if(!t) return;
   const d=t.dataset, u=me();
   if(d.go){go(d.go);return}
@@ -930,7 +956,16 @@ document.addEventListener('click',e=>{
     const chatRefs=S.chats.filter(m=>m.userId===u.id&&m.projectId===r.projectId&&(!prev||new Date(m.createdAt)>new Date(prev.createdAt))).sort(byTime).slice(-6).map(m=>m.id);
     const card={userId:u.id,projectId:r.projectId,type:r.type,choice:r.choice,reason:r.reason.trim(),prediction:r.prediction.trim(),
       evidence:r.evidence.filter(x=>x.label.trim()||x.url.trim()),occurredAt:new Date(r.occurred).toISOString(),correctsId:r.correctsId||null,chatRefs,origin:r.origin||'작업 중'};
-    act(async()=>{await store.add('card',card);ui.draft=null;ui.helper=null},'저장했습니다. 원본은 잠겼습니다.');return}
+    act(async()=>{
+      const c=await store.add('card',card);ui.draft=null;ui.helper=null;ui.sasu={loading:true};render();toast('저장했습니다. 원본은 잠겼습니다.');
+      let text='',source='template';
+      if(aiKey()){try{text=await askClaude(QUESTION_SYSTEM,[{role:'user',content:questionPrompt(c)}]);source='claude'}catch(err){toast('AI 사수 연결 실패, 기본 질문으로 대체: '+aiErr(err))}}
+      if(!text) text=pickQuestion(c.type);
+      text=text.split('\n')[0].replace(/^["'“‘\s]+|["'”’\s]+$/g,'');
+      const q=await store.add('question',{cardId:c.id,mentorId:'ai',source,text,openedAt:new Date().toISOString()});
+      ui.sasu={qid:q.id};
+    });return}
+  if(d.sasuclose!==undefined){ui.sasu=null;render();return}
   if(d.aicand!==undefined){ui.helper={busy:true};render();findCandidates(u.id,ui.draft.projectId).then(r=>{ui.helper={cands:r.list};render()});return}
   if(d.candfill!==undefined){
     const c=ui.helper.cands[+d.candfill];
@@ -970,11 +1005,11 @@ document.addEventListener('click',e=>{
     render();toast('판단 카드에 채웠어요. 이유를 내 말로 다듬고 저장하세요');return}
   if(d.aisave!==undefined){
     const v=document.getElementById('aiKeyIn').value.trim();
-    if(v&&!v.startsWith('•')) localStorage.setItem(AIKEY_KEY,v);
+    if(v&&!v.startsWith('•')) LS.set(AIKEY_KEY,v);
     if(!aiKey()){toast('키를 입력하세요');return}
     toast('연결 테스트 중…');
     askClaude('짧게 답한다.',[{role:'user',content:'연결 확인입니다. "연결됨"이라고만 답하세요.'}]).then(()=>{toast('Claude 연결 성공');render()}).catch(err=>{toast('연결 실패: '+aiErr(err));render()});return}
-  if(d.aiclear!==undefined){localStorage.removeItem(AIKEY_KEY);aiClient=null;toast('키를 삭제했습니다');render();return}
+  if(d.aiclear!==undefined){LS.del(AIKEY_KEY);aiClient=null;toast('키를 삭제했습니다');render();return}
   if(d.openq){const q=S.questions.find(x=>x.id===d.openq);q.openedAt=new Date().toISOString();act(()=>store.update('question',q));return}
   if(d.answer){
     const q=S.questions.find(x=>x.id===d.answer), v=document.getElementById('ans-'+q.id).value.trim();
@@ -1010,9 +1045,9 @@ document.addEventListener('click',e=>{
       rows.push([c.createdAt,c.occurredAt,isRealtime(c)?'Y':'N',a.name,a.team,p.title,c.type,c.choice,c.reason,c.prediction,(c.evidence||[]).length,pp[1][1][0],pp[2][1][0],pp[3][1][0],qs.length,qs.filter(q=>q.answer).length])});
     download('axproof-cards.csv','﻿'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');return}
   if(d.demo!==undefined){if(S.users.length&&!confirm('현재 데이터를 예시 데이터로 덮어쓸까요?'))return;seedDemo();toast('예시 데이터를 불러왔습니다');render();return}
-  if(d.reset!==undefined){if(!confirm('모든 데이터를 지울까요? 되돌릴 수 없습니다.'))return;S=emptyState();store.persist();localStorage.removeItem(ME_KEY);render();return}
+  if(d.reset!==undefined){if(!confirm('모든 데이터를 지울까요? 되돌릴 수 없습니다.'))return;S=emptyState();store.persist();LS.del(ME_KEY);render();return}
   if(d.start!==undefined){const n=document.getElementById('obName').value.trim()||'운영진';
-    act(async()=>{const a=await store.add('user',{name:n,role:'admin',tag:'운영진',team:'',cohort:''});localStorage.setItem(ME_KEY,a.id);view='people'},'운영진 계정을 만들었습니다');return}
+    act(async()=>{const a=await store.add('user',{name:n,role:'admin',tag:'운영진',team:'',cohort:''});LS.set(ME_KEY,a.id);view='people'},'운영진 계정을 만들었습니다');return}
   if(d.copysql!==undefined){navigator.clipboard&&navigator.clipboard.writeText(SQL).then(()=>toast('SQL을 복사했습니다'),()=>toast('복사 실패: 아래 SQL을 직접 선택하세요'));return}
   if(d.connect!==undefined){
     const url=document.getElementById('sbUrl').value.trim(),key=document.getElementById('sbKey').value.trim();
@@ -1081,15 +1116,17 @@ function seedDemo(){
   N('c5','u1','개선 1순위를 응대 교육으로 바꿔 매장 직원 인터뷰 결과와 맞췄다.','공유시간에 받은 "우선순위 근거가 뭐냐"는 질문이 숫자만 보던 나를 돌아보게 했다. 바로 바꿀 수 있는 것부터 본다.',9,false);
   N('c6','u4','확인 가능한 원인 2개로 좁히자 개선안이 구체적으로 나왔다.','AI가 원인을 많이 줄수록 데이터로 확인되는 것만 남기는 기준이 먼저 필요하다.',11,true);
   D.summaries.push({id:'s1',userId:'u1',projectId:'p1',aiAssisted:true,createdAt:at(2,21,0),text:'처음 문제: 리뷰 100건에서 불만 유형을 찾아 개선 우선순위를 정하는 일.\n주요 판단: AI 3분류에서 응대 불만 누락을 발견해 4분류로 고쳤고, 공유시간 질문 뒤 개선 1순위를 응대 교육으로 바꿨다.\n근거: 표본 50건 검증 시트, 재계산 시트, 매장 직원 인터뷰.\n바뀐 점: 숫자가 큰 불만보다 매장이 바로 바꿀 수 있는 불만을 먼저 봤다.\n다음에는: AI에 맡기기 전에 확인 기준부터 정하겠다.'});
+  Q('q6','c10','ai','재계산한 수치가 원자료와 달랐다면 어느 쪽을 믿었을 거야?',3,11,21,'원자료요. AI 요약은 반올림을 다르게 해서 생긴 차이라 원자료 기준으로 맞췄어요.',44,false,5);
+  D.questions.find(q=>q.id==='q6').source='claude';
   const L=(userId,axis,level,day)=>D.levels.push({id:uid(),userId,axis,level,by:'m2',createdAt:at(day,21,0)});
   [['u1',[3,4,2,3,0]],['u2',[4,3,3,2,0]],['u3',[2,1,1,2,0]],['u4',[3,3,3,2,0]],['u5',[2,4,2,3,0]]].forEach(([u,ls])=>ls.forEach((l,i)=>L(u,AXES[i],l,5)));
-  S=D; store.persist(); localStorage.setItem(ME_KEY,'u1'); view='work'; ui.draft=null;
+  S=D; store.persist(); LS.set(ME_KEY,'u1'); view='work'; ui.draft=null;
 }
 
 /* ---------- boot ---------- */
 view=(location.hash||'').slice(1);
 // config.js에 공유 DB가 지정돼 있고, 이 브라우저에서 직접 설정을 바꾼 적이 없으면 그 DB로 자동 연결
-(()=>{const P=window.AXPROOF_CONFIG||{};let untouched=false;try{untouched=localStorage.getItem(CFG_KEY)===null}catch(e){}
+(()=>{const P=window.AXPROOF_CONFIG||{};let untouched=false;try{untouched=LS.get(CFG_KEY)===null}catch(e){}
   if(P.supabaseUrl&&P.supabaseAnonKey&&untouched) cfg={mode:'supabase',url:P.supabaseUrl,key:P.supabaseAnonKey};})();
 store.init().then(render);
 if(cfg.mode==='supabase') setInterval(()=>{if(sb&&!ui.open&&!document.querySelector('textarea:focus,input:focus'))store.pull().then(render).catch(()=>{})},30000);
